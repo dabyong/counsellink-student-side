@@ -7,7 +7,6 @@ import { PersonalDataEmpComponent } from './pages/personal-data-emp/personal-dat
 import { PersonalDataComponent } from './pages/personal-data/personal-data.component';
 import { HsEnrollmentComponent } from './pages/hs-enrollment/hs-enrollment.component';
 import { SampleDataPageComponent } from './pages/sample-data-page/sample-data-page.component';
-import { AppointmentSchedulerComponent } from './guidance/appointment-scheduler/appointment-scheduler.component';
 import { AppointmentHistoryComponent } from './guidance/appointment-history/appointment-history.component';
 import { ApiIntegrationComponent } from './guidance/api-integration/api-integration.component';
 
@@ -28,8 +27,10 @@ const routes: Routes = [
       { path: 'sample-data-page', component: SampleDataPageComponent, outlet: 'div' },
       // Guidance Counseling — student-facing routes (registered inline, not via GuidanceRouteModule,
       // because My Portal's main is not lazy-loaded and forChild would register at root).
-      { path: 'guidance-scheduler', component: AppointmentSchedulerComponent, outlet: 'div' },
-      { path: 'guidance-history', component: AppointmentHistoryComponent, outlet: 'div' },
+      // Appointment History is the primary appointment page; the old scheduler/history routes redirect to it.
+      { path: 'guidance-appointments', component: AppointmentHistoryComponent, outlet: 'div' },
+      { path: 'guidance-scheduler', redirectTo: 'guidance-appointments', outlet: 'div' },
+      { path: 'guidance-history', redirectTo: 'guidance-appointments', outlet: 'div' },
       { path: 'guidance-api-integration', component: ApiIntegrationComponent, outlet: 'div' }
     ]
   },

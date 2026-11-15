@@ -7,7 +7,7 @@ export const environment = {
 
   // CounselLink API (Guidance Counseling micro-service).
   // TODO: replace with the real production host once confirmed by the backend team (must end with /api/).
-  counsellinkApi: ''
+  counsellinkApi: 'https://dave55-001-site1.etempurl.com/api/'
 };
 
 // Override console methods in production

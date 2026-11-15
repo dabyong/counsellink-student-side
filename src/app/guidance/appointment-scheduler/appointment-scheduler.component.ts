@@ -55,9 +55,6 @@ export class AppointmentSchedulerComponent implements OnInit {
   formError = '';
   saving = false;
 
-  /** True when useMock=false and an edit is requested (backend dependency — no student edit endpoint). */
-  editDisabledInLive = false;
-
   constructor(private guidance: GuidanceService, private dialog: MatDialog) {
     this.rows = this.buildRows();
     this.cursor = this.parse(this.guidance.today());
@@ -104,8 +101,8 @@ export class AppointmentSchedulerComponent implements OnInit {
 
   private setAppointments(items: Appointment[]) {
     this.appointments = items;
-    // Active appointment: first Pending or Approved
-    this.pending = items.filter(a => a.status === 'Pending' || a.status === 'Approved')[0] || null;
+    // Active appointment: first Pending, Approved, or Rescheduled
+    this.pending = items.filter(a => a.status === 'Pending' || a.status === 'Approved' || a.status === 'Rescheduled')[0] || null;
     this.build();
   }
 
@@ -228,18 +225,11 @@ export class AppointmentSchedulerComponent implements OnInit {
 
   /**
    * Edit: available for 'Pending' appointments only.
-   * In live mode (useMock=false): disabled with tooltip (no student-facing edit endpoint in API).
-   * In mock mode: opens the edit dialog pre-populated with the pending appointment's details.
    */
   editAppointment(a: Appointment, tpl: TemplateRef<any>) {
     if (!a || a.status !== 'Pending') { return; }
     // Guard: only allow editing own appointment
     if (this.profile && a.studentId && a.studentId !== this.profile.idNumber) { return; }
-    this.editDisabledInLive = !this.guidance.useMock;
-    if (!this.guidance.useMock) {
-      // Show disabled state — backend dependency: no student-facing edit endpoint exists.
-      return;
-    }
     this.mode = 'edit';
     this.resetForm();
     // Pre-populate with the appointment's current values
@@ -257,7 +247,6 @@ export class AppointmentSchedulerComponent implements OnInit {
 
   /**
    * Confirm an 'Approved' appointment.
-   * MOCK: sets status to 'Completed' locally.
    * LIVE: calls PUT /api/appointments/{id}/student-confirm, then sends student notification.
    * Counselor notification is NOT sent (NotificationDto has no employeeID — backend dependency).
    */
@@ -274,6 +263,25 @@ export class AppointmentSchedulerComponent implements OnInit {
       e => {
         this.saving = false;
         this.error = (e && e.message) ? e.message : 'Could not confirm the appointment. Please try again.';
+      }
+    );
+  }
+
+  acceptReschedule(a: Appointment) {
+    if (this.saving) { return; }
+    this.saving = true;
+    this.notice = '';
+    this.error = '';
+    this.guidance.acceptReschedule(a.id).subscribe(
+      updated => {
+        this.saving = false;
+        this.pending = updated;
+        this.notice = 'Reschedule accepted. Your appointment has been updated.';
+        this.load();
+      },
+      e => {
+        this.saving = false;
+        this.error = (e && e.message) ? e.message : 'Could not accept the reschedule. Please try again.';
       }
     );
   }
@@ -335,8 +343,9 @@ export class AppointmentSchedulerComponent implements OnInit {
     this.formError = '';
     const request$ = this.mode === 'book'
       ? this.guidance.book({
-        counselorId: this.counselor.id, counselingTypeId: this.form.typeId, date: this.form.date,
-        startTime: s.startTime, endTime: s.endTime, notes: this.form.notes.trim()
+        counselorId: this.counselor.id, counselingTypeId: this.form.typeId,
+        concernTypeId: '',  // scheduler is superseded by AppointmentHistoryComponent for booking
+        date: this.form.date, startTime: s.startTime, endTime: s.endTime, notes: this.form.notes.trim()
       })
       : this.guidance.reschedule(this.pending.id, { date: this.form.date, startTime: s.startTime, endTime: s.endTime });
 
@@ -357,8 +366,6 @@ export class AppointmentSchedulerComponent implements OnInit {
   }
 
   private submitEdit() {
-    // Only available in mock mode (no student-facing edit endpoint in live API).
-    if (!this.guidance.useMock) { return; }
     if (!this.pending || this.pending.status !== 'Pending') { return; }
     // Guard: only allow editing own appointment
     if (this.profile && this.pending.studentId && this.pending.studentId !== this.profile.idNumber) { return; }
@@ -366,7 +373,7 @@ export class AppointmentSchedulerComponent implements OnInit {
     this.saving = true;
     this.formError = '';
 
-    // Apply edits in-place to the mock store via service's internal mock
+    // Apply edits in-place to the pending appointment
     const appt = this.pending;
     appt.counselingTypeId = this.form.typeId;
     appt.counselingTypeName = (this.types.find(t => t.id === this.form.typeId) || { name: '' }).name;

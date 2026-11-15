@@ -1172,7 +1172,10 @@ export class GlobalService {
         return;
       }
 
-
+      // After announcement closes, navigate student to Appointments as the default tab.
+      if (this.requestrole() === 'Student') {
+        this.router.navigate(['../main', { outlets: { div: 'guidance-appointments' } }]);
+      }
 
       if (result != undefined) {
         if (result.result == 'saved') {

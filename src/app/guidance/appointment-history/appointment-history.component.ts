@@ -1,8 +1,15 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
-import { Subject, Subscription } from 'rxjs';
-import { debounceTime } from 'rxjs/operators';
+import { Component, OnDestroy, OnInit, TemplateRef, ViewChild } from '@angular/core';
+import { Subject, Subscription, forkJoin } from 'rxjs';
+import { debounceTime, switchMap } from 'rxjs/operators';
+import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { GuidanceService } from '../guidance.service';
-import { Appointment, APPOINTMENT_STATUSES, AppointmentStatus } from '../guidance.models';
+import { AppointmentDraftService } from '../appointment-draft.service';
+import { GlobalService } from '../../global.service';
+import Swal from 'sweetalert2';
+import {
+  Appointment, AppointmentDraft, APPOINTMENT_STATUSES, AppointmentStatus, BookingRequest,
+  Counselor, CounselingType, RescheduleRequest, StudentProfile, TimeSlot
+} from '../guidance.models';
 
 @Component({
   selector: 'app-appointment-history',
@@ -23,11 +30,59 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
   loading = true;
   error = '';
 
+  // ---- booking context (counselor + types) for the New Appointment / Reschedule dialogs
+  profile: StudentProfile = null;
+  counselor: Counselor = null;
+  types: CounselingType[] = [];       // AppointmentType — not shown in the booking form
+  concernTypes: CounselingType[] = []; // ConcernType — shown in the booking dropdown
+  counselorError = '';
+
+  // ---- booking / reschedule / cancel dialog state
+  private dialogRef: MatDialogRef<any> = null;
+  mode: 'book' | 'reschedule' = 'book';
+  target: Appointment = null;
+  form = { concernTypeId: '', date: '', notes: '' };
+  minDate = '';
+  slots: TimeSlot[] = [];
+  slotsLoading = false;
+  selected: TimeSlot = null;
+  formError = '';
+  saving = false;
+  actionLoading = false;
+  actionError = '';
+  notice = '';
+  confirmTarget: Appointment = null;
+
+  // ---- IDs of appointments confirmed by the student this session (backend keeps status 'Confirmed'
+  //       which maps to 'Approved' in labelFor; track confirmed IDs to suppress the Confirm button).
+  confirmedIds: Set<number> = new Set<number>();
+  // IDs of appointments where the STUDENT submitted a reschedule request this session.
+  // For these, the appointment shows as "Waiting for counselor" — no Accept Reschedule button.
+  rescheduledByStudentIds: Set<number> = new Set<number>();
+
+  // ---- Draft state --------------------------------------------------------
+  drafts: AppointmentDraft[] = [];
+  /** The draft currently being edited; null in normal booking mode. */
+  activeDraft: AppointmentDraft | null = null;
+  draftSaving = false;
+  draftError = '';
+  /** True when the form dialog is open in draft-edit mode. */
+  get isDraftMode(): boolean { return this.activeDraft !== null; }
+
+  // True until the first successful or failed load completes — drives the Swal loading popup.
+  private firstLoad = true;
+
+  @ViewChild('confirmDialog', { static: false }) confirmDialogTpl: TemplateRef<any>;
+
   private typing$ = new Subject<void>();
   private sub: Subscription;
   private requestNo = 0;
 
-  constructor(private guidance: GuidanceService) { }
+  constructor(private guidance: GuidanceService, private dialog: MatDialog, private draftSvc: AppointmentDraftService, private globalSvc: GlobalService) { }
+
+  private get studentId(): string {
+    return String(this.globalSvc.requestid() || '');
+  }
 
   ngOnInit() {
     this.sub = this.typing$.pipe(debounceTime(300)).subscribe(() => {
@@ -35,6 +90,8 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
       this.load();
     });
     this.load();
+    this.loadBookingContext();
+    this.loadDrafts();
   }
 
   ngOnDestroy() {
@@ -45,6 +102,10 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
     const no = ++this.requestNo;
     this.loading = true;
     this.error = '';
+    // Show the Swal loading popup only on the initial page entry.
+    if (this.firstLoad) {
+      Swal({ title: 'Loading appointments\u2026', allowOutsideClick: false, onOpen: () => { Swal.showLoading(); } });
+    }
     this.guidance.getHistory({
       pageIndex: this.pageIndex, pageSize: this.pageSize, status: this.status, search: this.search
     }).subscribe(
@@ -53,11 +114,38 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
         this.items = r.items;
         this.total = r.total;
         this.loading = false;
+        if (this.firstLoad) { this.firstLoad = false; Swal.close(); }
       },
       e => {
         if (no !== this.requestNo) { return; }
         this.error = (e && e.message) ? e.message : 'Could not load your appointment history.';
         this.loading = false;
+        if (this.firstLoad) { this.firstLoad = false; Swal.close(); }
+      }
+    );
+  }
+
+  /**
+   * Loads the counselor + concern types needed by the New Appointment / Reschedule dialogs.
+   * Uses GET /api/constants/ConcernType for the concern dropdown.
+   * A failure surfaces as counselorError (disables booking) and is never silently mocked.
+   */
+  loadBookingContext() {
+    this.guidance.getStudentProfile().pipe(
+      switchMap(p => {
+        this.profile = p;
+        return forkJoin(
+          this.guidance.getCounselor(p.departmentCode),
+          this.guidance.getConcernTypes()
+        );
+      })
+    ).subscribe(
+      res => {
+        this.counselor = res[0];
+        this.concernTypes = res[1];
+      },
+      e => {
+        this.counselorError = (e && e.message) ? e.message : 'Could not load counselor info; booking is unavailable.';
       }
     );
   }
@@ -77,4 +165,408 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
   }
 
   statusClass(a: Appointment): string { return 'st-' + a.status.toLowerCase().replace(/-/g, ''); }
+
+  // ----------------------------------------------------------- booking dialog
+
+  openBook(tpl: TemplateRef<any>) {
+    this.mode = 'book';
+    this.target = null;
+    this.activeDraft = null;   // ensure normal booking mode
+    this.resetForm();
+    this.openDialog(tpl);
+  }
+
+  openReschedule(a: Appointment, tpl: TemplateRef<any>) {
+    this.target = a;
+    this.activeDraft = null;   // ensure normal reschedule mode
+    this.mode = 'reschedule';
+    this.resetForm();
+    this.openDialog(tpl);
+  }
+
+  // ---------------------------------------------------------------- drafts
+
+  private loadDrafts() {
+    const sid = this.studentId;
+    if (!sid) { return; }
+    this.draftSvc.getDrafts(sid).subscribe(
+      d => { this.drafts = d; },
+      () => { /* non-fatal: drafts section stays empty */ }
+    );
+  }
+
+  /**
+   * Save current booking form as a draft (new or update existing).
+   * Never calls the appointment API. Does not reserve a slot.
+   */
+  saveDraft(tpl: TemplateRef<any>) {
+    if (this.draftSaving) { return; }
+    this.draftSaving = true;
+    this.draftError = '';
+
+    const concernName = (this.concernTypes.find(c => c.id === this.form.concernTypeId) || { name: '' }).name;
+    const payload: Omit<AppointmentDraft, 'id' | 'savedAt'> = {
+      // Counselor: prefer live-loaded value; fall back to whatever is already in the draft.
+      counselorId:    (this.counselor && this.counselor.id)
+                        ? this.counselor.id
+                        : (this.activeDraft ? this.activeDraft.counselorId : ''),
+      counselorName:  (this.counselor && this.counselor.name)
+                        ? this.counselor.name
+                        : (this.activeDraft ? this.activeDraft.counselorName : ''),
+      // Concern: form value wins; fall back to saved draft value when the field is blank.
+      concernTypeId:  this.form.concernTypeId
+                        || (this.activeDraft ? this.activeDraft.concernTypeId : ''),
+      concernTypeName: concernName
+                        || (this.activeDraft ? this.activeDraft.concernTypeName : ''),
+      date:      this.form.date,
+      startTime: this.selected ? this.selected.startTime : (this.activeDraft ? this.activeDraft.startTime : ''),
+      endTime:   this.selected ? this.selected.endTime   : (this.activeDraft ? this.activeDraft.endTime   : ''),
+      notes:     this.form.notes.trim()
+                   || (this.activeDraft ? this.activeDraft.notes : ''),
+      // Grade/year from the authenticated student's profile — required by the backend for submission.
+      gradeOrYearLevel: this.profile ? this.profile.yearLevel
+                          : (this.activeDraft ? this.activeDraft.gradeOrYearLevel : null),
+    };
+
+    const op = this.activeDraft
+      ? this.draftSvc.updateDraft({ ...payload, id: this.activeDraft.id, savedAt: this.activeDraft.savedAt }, this.studentId)
+      : this.draftSvc.saveDraft(payload, this.studentId);
+
+    op.subscribe(
+      saved => {
+        this.draftSaving = false;
+        this.activeDraft = saved;
+        this.loadDrafts();
+        if (this.dialogRef) { this.dialogRef.close(); }
+        this.notice = 'Draft saved. You can reopen it from the Drafts section below.';
+      },
+      e => {
+        this.draftSaving = false;
+        this.draftError = (e && e.message) ? e.message : 'Could not save draft. Please try again.';
+      }
+    );
+  }
+
+  /** Open a saved draft into the booking form for editing. */
+  openDraft(draft: AppointmentDraft, tpl: TemplateRef<any>) {
+    this.mode = 'book';
+    this.target = null;
+    this.activeDraft = draft;
+    this.draftError = '';
+
+    // Populate form from draft values.
+    this.form = { concernTypeId: draft.concernTypeId, date: draft.date, notes: draft.notes };
+    this.minDate = this.guidance.today();
+    this.slots = [];
+    this.selected = null;
+    this.formError = '';
+
+    // Trigger slot loading if a date is saved; availability is refreshed from the API.
+    if (draft.date) { this.onDateChange(); }
+
+    this.openDialog(tpl);
+  }
+
+  /**
+   * Submit Draft — calls updateDraft (PUT) then submitDraft (POST .../submit { idNumber }).
+   * The backend transitions status 5 → 1 (Requested). No deleteDraft call needed.
+   * On success, refreshes both the drafts list and the appointments list.
+   */
+  submitDraft() {
+    if (this.draftSaving || !this.activeDraft) { return; }
+
+    // Validate that the student has selected a slot with both start and end times.
+    if (!this.selected || !this.selected.startTime || !this.selected.endTime) {
+      this.formError = 'Please select an available time slot (with start and end time) before submitting.';
+      return;
+    }
+
+    // Build the merge now — before the Swal prompt — so we can validate all required fields
+    // while the user is still looking at the form.
+    const concernName = (this.concernTypes.find(c => c.id === this.form.concernTypeId) || { name: '' }).name;
+    const mergedCounselorId   = (this.counselor && this.counselor.id)   ? this.counselor.id   : this.activeDraft.counselorId;
+    const mergedConcernTypeId = this.form.concernTypeId                 || this.activeDraft.concernTypeId;
+    const mergedNotes         = this.form.notes.trim()                  || this.activeDraft.notes;
+    const mergedDate          = this.form.date                          || this.activeDraft.date;
+
+    // Validate all five backend-required fields before showing the confirmation dialog.
+    const missing: string[] = [];
+    if (!mergedCounselorId)   { missing.push('counselor'); }
+    if (!mergedDate)          { missing.push('date'); }
+    if (!this.selected.startTime) { missing.push('start time'); }
+    if (!this.selected.endTime)   { missing.push('end time'); }
+    if (!mergedNotes)         { missing.push('reason / concern description'); }
+    if (!mergedConcernTypeId) { missing.push('concern type'); }
+
+    if (missing.length > 0) {
+      this.formError = 'Please provide: ' + missing.join(', ') + '.';
+      return;
+    }
+
+    Swal({
+      title: 'Send appointment request?',
+      html: 'This will send your counseling request to the guidance counselor for review.',
+      type: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, send it',
+      cancelButtonText: 'Not yet'
+    }).then(result => {
+      if (!result.value) { return; }
+      this.draftSaving = true;
+      this.draftError = '';
+
+      const latestDraft: AppointmentDraft = {
+        ...this.activeDraft,
+        counselorId:     mergedCounselorId,
+        counselorName:   (this.counselor && this.counselor.name) ? this.counselor.name : this.activeDraft.counselorName,
+        concernTypeId:   mergedConcernTypeId,
+        concernTypeName: concernName || this.activeDraft.concernTypeName,
+        date:            mergedDate,
+        // endTime from the confirmed slot only — backend returns EndTime but no AppointmentEndTime
+        startTime:       this.selected.startTime,
+        endTime:         this.selected.endTime,
+        notes:           mergedNotes,
+        // Grade/year from live profile; fall back to what was already stored in the draft
+        gradeOrYearLevel: this.profile ? this.profile.yearLevel : this.activeDraft.gradeOrYearLevel,
+      };
+      const sid = this.studentId;
+
+      // 1. Persist all edits to the backend, then 2. submit.
+      this.draftSvc.updateDraft(latestDraft, sid).pipe(
+        switchMap(() => this.draftSvc.submitDraft(latestDraft.id, sid))
+      ).subscribe(
+        () => {
+          this.draftSaving = false;
+          this.activeDraft = null;
+          if (this.dialogRef) { this.dialogRef.close(); }
+          // Backend transitions status 5 → 1 — refresh both lists.
+          this.loadDrafts();
+          this.load();
+          this.notice = 'Appointment request sent to your counselor.';
+        },
+        e => {
+          this.draftSaving = false;
+          this.draftError = (e && e.message) ? e.message : 'Could not submit the draft. Please try again.';
+        }
+      );
+    });
+  }
+
+  /**
+   * Cancel/delete a draft — asks for confirmation then removes from the store.
+   * "Cancel Draft" means deleting the draft, not cancelling a real appointment.
+   */
+  cancelDraft() {
+    if (!this.activeDraft) { return; }
+    const draftId = this.activeDraft.id;
+    const sid = this.studentId;
+    Swal({
+      title: 'Delete this draft?',
+      text: 'The draft will be permanently removed. This cannot be undone.',
+      type: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Delete draft',
+      cancelButtonText: 'Keep it'
+    }).then(result => {
+      if (!result.value) { return; }
+      this.draftSvc.deleteDraft(draftId, sid).subscribe(() => {
+        this.activeDraft = null;
+        this.loadDrafts();
+        if (this.dialogRef) { this.dialogRef.close(); }
+        this.notice = 'Draft deleted.';
+      });
+    });
+  }
+
+  deleteDraftFromList(draft: AppointmentDraft) {
+    const sid = this.studentId;
+    Swal({
+      title: 'Delete this draft?',
+      text: 'The draft will be permanently removed.',
+      type: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+      cancelButtonText: 'Cancel'
+    }).then(result => {
+      if (!result.value) { return; }
+      this.draftSvc.deleteDraft(draft.id, sid).subscribe(() => { this.loadDrafts(); });
+    });
+  }
+
+  draftTime(d: AppointmentDraft): string {
+    if (!d.startTime) { return '—'; }
+    return this.guidance.formatTime(d.startTime) + (d.endTime ? ' – ' + this.guidance.formatTime(d.endTime) : '');
+  }
+
+  /** Confirm an 'Approved' (counselor-proposed) appointment: PUT /api/appointments/{id}/student-confirm. */
+  confirmAppointment(a: Appointment) {
+    if (this.actionLoading || this.confirmedIds.has(a.id)) { return; }
+    this.actionLoading = true;
+    this.actionError = '';
+    this.notice = '';
+    this.guidance.studentConfirm(a.id).subscribe(
+      (updated: Appointment) => {
+        this.actionLoading = false;
+        // Track this ID so the Confirm button is hidden even though the backend status
+        // stays 'Confirmed' (mapped to 'Approved' by labelFor — no distinct post-confirm status).
+        this.confirmedIds.add(a.id);
+        // Patch the item in the current list to reflect the returned state immediately.
+        const idx = this.items.findIndex(x => x.id === updated.id);
+        if (idx >= 0) { this.items[idx] = updated; }
+        this.notice = 'Appointment confirmed. Your counselor will be notified.';
+        // Re-fetch the list to sync with the backend.
+        this.load();
+      },
+      e => {
+        this.actionLoading = false;
+        this.actionError = (e && e.message) ? e.message : 'Confirmation failed.';
+      }
+    );
+  }
+
+  /** Accept a counselor-proposed reschedule: PUT /api/appointments/{id}/accept-reschedule. */
+  acceptReschedule(a: Appointment) {
+    if (this.actionLoading) { return; }
+    this.actionLoading = true;
+    this.actionError = '';
+    this.guidance.acceptReschedule(a.id).subscribe(
+      () => {
+        this.actionLoading = false;
+        this.load();
+      },
+      e => {
+        this.actionLoading = false;
+        this.actionError = (e && e.message) ? e.message : 'Could not accept the reschedule.';
+      }
+    );
+  }
+
+  /** Open the cancel-confirmation dialog for an appointment (Cancel = delete). */
+  requestDelete(a: Appointment) {
+    this.confirmTarget = a;
+    this.openDialog(this.confirmDialogTpl);
+  }
+
+  /** Delete the selected appointment: DELETE /api/appointments/{id} (path id only). */
+  confirmDelete() {
+    if (this.saving || !this.confirmTarget) { return; }
+    this.saving = true;
+    this.actionError = '';
+    this.guidance.deleteAppointment(this.confirmTarget.id).subscribe(
+      () => {
+        this.saving = false;
+        if (this.dialogRef) { this.dialogRef.close(); }
+        this.load();
+      },
+      e => {
+        this.saving = false;
+        this.actionError = (e && e.message) ? e.message : 'Could not cancel the appointment.';
+      }
+    );
+  }
+
+  private openDialog(tpl: TemplateRef<any>) {
+    this.dialogRef = this.dialog.open(tpl, { width: '480px', maxWidth: '95vw', disableClose: true });
+    this.dialogRef.afterClosed().subscribe(() => this.dialogRef = null);
+  }
+
+  closeForm() {
+    if (this.saving) { return; }
+    if (this.dialogRef) { this.dialogRef.close(); }
+  }
+
+  private resetForm() {
+    this.form = { concernTypeId: '', date: '', notes: '' };
+    this.minDate = this.guidance.today();
+    this.slots = [];
+    this.selected = null;
+    this.formError = '';
+  }
+
+  onDateChange() {
+    this.selected = null;
+    this.slots = [];
+    this.formError = '';
+    if (!this.form.date) { return; }
+    if (this.form.date < this.minDate) { this.formError = 'Please choose today or a later date.'; return; }
+    if (this.guidance.isWeekend(this.form.date)) { this.formError = 'Appointments are not available on weekends.'; return; }
+    if (!this.counselor) {
+      this.formError = this.counselorError || 'Counselor info is not available yet. Please close and try again.';
+      return;
+    }
+    this.slotsLoading = true;
+    this.guidance.getSlots(this.counselor.id, this.form.date).subscribe(
+      s => { this.slots = s; this.slotsLoading = false; },
+      e => { this.formError = (e && e.message) ? e.message : 'Could not load time slots.'; this.slotsLoading = false; }
+    );
+  }
+
+  /** Only 'Available' slots can be selected; 'Unavailable' and 'Own' are disabled. */
+  pick(s: TimeSlot) { if (s.status === 'Available') { this.selected = s; } }
+
+  slotLabel(s: TimeSlot): string {
+    if (s.status === 'Own') { return 'Your appointment'; }
+    if (s.status === 'Unavailable') { return 'Booked'; }
+    return s.label;
+  }
+
+  get canSubmit(): boolean {
+    if (this.mode === 'book') {
+      return !!this.selected && !!this.form.date && !!this.form.concernTypeId && !!this.form.notes.trim() && !this.saving;
+    }
+    return !!this.selected && !!this.form.date && !this.saving;
+  }
+
+  submit() {
+    if (!this.canSubmit) { return; }
+    const s = this.selected;
+    this.saving = true;
+    this.formError = '';
+
+    if (this.mode === 'book') {
+      const req: BookingRequest = {
+        counselorId: this.counselor.id,
+        counselingTypeId: '',        // appointmentTypeID — set to Student Initiated (1) in CounselLinkApi
+        concernTypeId: this.form.concernTypeId,
+        date: this.form.date,
+        startTime: s.startTime,
+        endTime: s.endTime,
+        notes: this.form.notes.trim()
+      };
+      this.guidance.book(req).subscribe(
+        () => {
+          this.saving = false;
+          if (this.dialogRef) { this.dialogRef.close(); }
+          this.load();
+        },
+        e => {
+          this.saving = false;
+          this.formError = (e && e.message) ? e.message : 'Something went wrong. Please try again.';
+        }
+      );
+    } else {
+      const req: RescheduleRequest = {
+        date: this.form.date,
+        startTime: s.startTime,
+        endTime: s.endTime
+      };
+      this.guidance.reschedule(this.target.id, req).subscribe(
+        (updated: Appointment) => {
+          this.saving = false;
+          if (this.dialogRef) { this.dialogRef.close(); }
+          // Track this as student-initiated so "Accept Reschedule" is suppressed.
+          this.rescheduledByStudentIds.add(this.target.id);
+          // Patch the item in the list immediately with the returned state.
+          const idx = this.items.findIndex(x => x.id === updated.id);
+          if (idx >= 0) { this.items[idx] = updated; }
+          this.notice = 'Reschedule request sent. Waiting for counselor confirmation.';
+          this.load();
+        },
+        e => {
+          this.saving = false;
+          this.formError = (e && e.message) ? e.message : 'Something went wrong. Please try again.';
+        }
+      );
+    }
+  }
 }

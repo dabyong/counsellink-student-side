@@ -4,7 +4,7 @@
 // 'Approved' is added to represent counselor-approved appointments (counselor has approved/confirmed it).
 // labelFor() in counsellink.api.ts maps API status names containing 'approv' or 'confirm'
 // (but NOT 'schedul' or 'pend') to 'Approved'.
-export type AppointmentStatus = 'Pending' | 'Approved' | 'Completed' | 'Rescheduled' | 'No-show';
+export type AppointmentStatus = 'Pending' | 'Approved' | 'Completed' | 'Rescheduled' | 'No-show' | 'Draft';
 
 // 'Own' is added to represent a slot already taken by the authenticated student themselves.
 export type SlotStatus = 'Available' | 'Unavailable' | 'Own';
@@ -59,7 +59,8 @@ export interface Appointment {
   counselorId: string;
   counselorName: string;
   counselingTypeId: string;
-  counselingTypeName: string;
+  counselingTypeName: string;  // AppointmentType: Student Initiated / Counselor Initiated / Walk-in / Referred
+  concernTypeName: string;     // ConcernType: Academic Concerns / Family Issues etc. — from API row
   date: string;        // 'YYYY-MM-DD'
   startTime: string;   // 'HH:mm'
   endTime: string;
@@ -70,7 +71,8 @@ export interface Appointment {
 
 export interface BookingRequest {
   counselorId: string;
-  counselingTypeId: string;
+  counselingTypeId: string;  // appointmentTypeID — kept for backward compat, set to Student Initiated
+  concernTypeId: string;     // concernTypeID — the concern the student selects
   date: string;
   startTime: string;
   endTime: string;
@@ -94,4 +96,21 @@ export interface HistoryQuery {
 export interface HistoryResult {
   items: Appointment[];
   total: number;
+}
+
+// ---- Draft (Phase 1: in-memory; Phase 2 will back this with a backend endpoint) ----
+
+export interface AppointmentDraft {
+  /** Client-generated UUID, stable across edits. Phase 2: replace with server-assigned ID. */
+  id: string;
+  counselorId: string;
+  counselorName: string;
+  concernTypeId: string;
+  concernTypeName: string;
+  date: string;         // 'YYYY-MM-DD' — preferred date, may no longer be available
+  startTime: string;    // 'HH:mm'
+  endTime: string;
+  notes: string;
+  gradeOrYearLevel: number | null;  // from student profile; required by backend for submission
+  savedAt: string;      // ISO timestamp
 }

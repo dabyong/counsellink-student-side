@@ -1,16 +1,22 @@
 <div class="hist">
 
-  <!-- Banner on the left; Export button removed (REQ 3) -->
+  <!-- Banner on the left; New Appointment button on the right -->
   <div class="top">
     <div class="head">
       <h2>Appointment History</h2>
+    </div>
+    <div class="actions">
+      <button mat-raised-button type="button" class="btn-primary" [disabled]="!counselor || !!counselorError"
+        [matTooltip]="counselorError" (click)="openBook(formDialog)">
+        <mat-icon>add</mat-icon> New Appointment
+      </button>
     </div>
   </div>
 
   <div class="card">
 
-    <!-- Progress bar: only depends on 'loading' (exporting removed) -->
-    <mat-progress-bar mode="indeterminate" *ngIf="loading"></mat-progress-bar>
+    <!-- Progress bar: list loading or an action in progress -->
+    <mat-progress-bar mode="indeterminate" *ngIf="loading || actionLoading"></mat-progress-bar>
 
     <div class="body">
       <div class="intro">
@@ -40,24 +46,108 @@
         <button mat-stroked-button type="button" class="btn-outline" (click)="load()">Try again</button>
       </div>
 
-      <ul class="list" *ngIf="!loading && !error && items.length">
-        <li class="row" *ngFor="let a of items">
-          <div class="when">
-            <strong>{{ a.date | date:'MMM d, y' }}</strong>
-            <span>{{ a.date | date:'EEE' }} &bull; {{ time(a) }}</span>
-          </div>
-          <div class="what">
-            <strong>{{ a.counselingTypeName }}</strong>
-            <span>{{ a.counselorName }}</span>
-            <span class="notes" *ngIf="a.notes">{{ a.notes }}</span>
-          </div>
-          <span class="badge" [ngClass]="statusClass(a)">{{ a.status }}</span>
-        </li>
-      </ul>
+      <div class="msg msg-error" *ngIf="actionError">
+        <span>{{ actionError }}</span>
+        <button mat-stroked-button type="button" class="btn-outline" (click)="actionError=''">Dismiss</button>
+      </div>
+
+      <div class="msg msg-ok" *ngIf="notice">
+        <span>{{ notice }}</span>
+        <button mat-stroked-button type="button" class="btn-outline" (click)="notice=''">Dismiss</button>
+      </div>
+
+      <div class="table-wrap" *ngIf="!loading && !error && items.length">
+        <table class="appt-table">
+          <thead>
+            <tr>
+              <th class="col-id">ID</th>
+              <th class="col-date">Date</th>
+              <th class="col-time">Time</th>
+              <th class="col-type">Type</th>
+              <th class="col-concern">Concern</th>
+              <th class="col-notes">Reason / Description</th>
+              <th class="col-status">Status</th>
+              <th class="col-actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let a of items" [ngClass]="'row-' + statusClass(a)">
+              <td class="col-id" data-label="ID">{{ a.id }}</td>
+              <td class="col-date" data-label="Date">{{ a.date | date:'MMM d, y' }}</td>
+              <td class="col-time" data-label="Time">{{ time(a) }}</td>
+              <td class="col-type" data-label="Type">
+                <span class="type-badge">{{ a.counselingTypeName || '—' }}</span>
+              </td>
+              <td class="col-concern" data-label="Concern">{{ a.concernTypeName || '—' }}</td>
+              <td class="col-notes" data-label="Reason">{{ a.notes || '—' }}</td>
+              <td class="col-status" data-label="Status">
+                <span class="badge" [ngClass]="statusClass(a)">{{ a.status }}</span>
+              </td>
+              <td class="col-actions" data-label="Actions">
+                <div class="row-actions">
+                  <ng-container *ngIf="a.status === 'Pending'">
+                    <button mat-stroked-button type="button" class="btn-outline btn-sm" [disabled]="actionLoading"
+                      (click)="openReschedule(a, formDialog)">Reschedule</button>
+                    <button mat-stroked-button type="button" class="btn-outline btn-sm" [disabled]="actionLoading"
+                      (click)="requestDelete(a)">Cancel</button>
+                  </ng-container>
+                  <ng-container *ngIf="a.status === 'Approved'">
+                    <button mat-stroked-button type="button" class="btn-outline btn-sm" [disabled]="actionLoading"
+                      (click)="openReschedule(a, formDialog)">Reschedule</button>
+                  </ng-container>
+                  <ng-container *ngIf="a.status === 'Rescheduled'">
+                    <!-- Rescheduled appointments are always waiting for counselor action; no student Accept button -->
+                    <span class="waiting-label">Waiting for counselor</span>
+                  </ng-container>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <div class="empty" *ngIf="!loading && !error && !items.length">
         <ng-container *ngIf="search || status !== 'All'">No appointments match your search or filter.</ng-container>
-        <ng-container *ngIf="!search && status === 'All'">You have no appointments yet. Book one from Appointment Scheduler.</ng-container>
+        <ng-container *ngIf="!search && status === 'All'">You have no appointments yet. Book one with the New Appointment button.</ng-container>
+      </div>
+
+      <!-- ---- Drafts section ---- -->
+      <div class="drafts-section" *ngIf="drafts.length">
+        <h3 class="drafts-heading">
+          <mat-icon>drafts</mat-icon> Saved Drafts
+          <span class="drafts-count">{{ drafts.length }}</span>
+        </h3>
+        <table class="appt-table drafts-table">
+          <thead>
+            <tr>
+              <th class="col-date">Preferred Date</th>
+              <th class="col-time">Time</th>
+              <th class="col-concern">Concern</th>
+              <th class="col-notes">Notes</th>
+              <th class="col-status">Status</th>
+              <th class="col-actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let d of drafts">
+              <td class="col-date" data-label="Date">{{ d.date ? (d.date | date:'MMM d, y') : '—' }}</td>
+              <td class="col-time" data-label="Time">{{ draftTime(d) }}</td>
+              <td class="col-concern" data-label="Concern">{{ d.concernTypeName || '—' }}</td>
+              <td class="col-notes" data-label="Notes">{{ d.notes || '—' }}</td>
+              <td class="col-status" data-label="Status">
+                <span class="badge draft-badge">Draft</span>
+              </td>
+              <td class="col-actions" data-label="Actions">
+                <div class="row-actions">
+                  <button mat-raised-button type="button" class="btn-primary btn-sm"
+                    (click)="openDraft(d, formDialog)">Edit</button>
+                  <button mat-stroked-button type="button" class="btn-outline btn-sm"
+                    (click)="deleteDraftFromList(d)">Delete</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       <mat-paginator *ngIf="total > 0" [length]="total" [pageIndex]="pageIndex" [pageSize]="pageSize"
@@ -67,3 +157,101 @@
   </div>
 
 </div>
+
+<!-- Booking / Reschedule dialog (no 'edit' mode: UpdateAppointmentDto has no date/time fields) -->
+<ng-template #formDialog>
+  <h2 mat-dialog-title>
+    <ng-container *ngIf="isDraftMode">Edit Draft</ng-container>
+    <ng-container *ngIf="!isDraftMode && mode === 'book'">New Appointment</ng-container>
+    <ng-container *ngIf="!isDraftMode && mode === 'reschedule'">Reschedule Appointment</ng-container>
+  </h2>
+  <mat-dialog-content class="dlg-body">
+    <p class="who" *ngIf="counselor">Counselor: <strong>{{ counselor?.name }}</strong></p>
+
+    <mat-form-field appearance="fill" class="full" *ngIf="mode === 'book'">
+      <mat-label>Concern type</mat-label>
+      <mat-select [(ngModel)]="form.concernTypeId">
+        <mat-option *ngFor="let t of concernTypes" [value]="t.id">{{ t.name }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <p class="who" *ngIf="mode === 'reschedule' && target">Type: <strong>{{ target?.counselingTypeName }}</strong></p>
+
+    <mat-form-field appearance="fill" class="full">
+      <mat-label>Date</mat-label>
+      <input matInput type="date" [(ngModel)]="form.date" [min]="minDate" (ngModelChange)="onDateChange()">
+    </mat-form-field>
+
+    <!-- Draft: show saved time hint when slots haven't loaded yet -->
+    <p class="draft-time-hint" *ngIf="isDraftMode && activeDraft.startTime && !slots.length && !slotsLoading">
+      Previously selected: {{ draftTime(activeDraft) }} — refreshing availability&hellip;
+    </p>
+
+    <div class="slot-block">
+      <span class="slot-title">Available time slots</span>
+      <mat-progress-bar mode="indeterminate" *ngIf="slotsLoading"></mat-progress-bar>
+      <div class="slots" *ngIf="slots.length">
+        <button type="button" mat-stroked-button class="slot" *ngFor="let s of slots"
+          [class.sel]="selected === s" [class.slot-own]="s.status === 'Own'"
+          [disabled]="s.status !== 'Available'" (click)="pick(s)">
+          {{ slotLabel(s) }}
+        </button>
+      </div>
+      <p class="empty" *ngIf="!slotsLoading && !slots.length && form.date">No slots available on this date.</p>
+    </div>
+
+    <mat-form-field appearance="fill" class="full" *ngIf="mode === 'book'">
+      <mat-label>Notes</mat-label>
+      <textarea matInput [(ngModel)]="form.notes" rows="3" placeholder="Optional note for the counselor"></textarea>
+    </mat-form-field>
+
+    <div class="msg msg-error" *ngIf="formError">{{ formError }}</div>
+    <div class="msg msg-error" *ngIf="draftError">{{ draftError }}</div>
+  </mat-dialog-content>
+
+  <!-- Normal booking mode: Book + Save as Draft -->
+  <mat-dialog-actions class="dlg-actions" *ngIf="!isDraftMode && mode === 'book'">
+    <button mat-button type="button" (click)="closeForm()" [disabled]="saving || draftSaving">Cancel</button>
+    <button mat-stroked-button type="button" class="btn-outline" (click)="saveDraft(formDialog)"
+      [disabled]="saving || draftSaving">
+      {{ draftSaving ? 'Saving...' : 'Save as Draft' }}
+    </button>
+    <button mat-raised-button type="button" class="btn-primary" (click)="submit()" [disabled]="!canSubmit">
+      {{ saving ? 'Saving...' : 'Book' }}
+    </button>
+  </mat-dialog-actions>
+
+  <!-- Normal reschedule mode: original single button -->
+  <mat-dialog-actions class="dlg-actions" *ngIf="!isDraftMode && mode === 'reschedule'">
+    <button mat-button type="button" (click)="closeForm()" [disabled]="saving">Cancel</button>
+    <button mat-raised-button type="button" class="btn-primary" (click)="submit()" [disabled]="!canSubmit">
+      {{ saving ? 'Saving...' : 'Reschedule' }}
+    </button>
+  </mat-dialog-actions>
+
+  <!-- Draft editing mode: Submit Draft + Cancel Draft + Save -->
+  <mat-dialog-actions class="dlg-actions" *ngIf="isDraftMode">
+    <button mat-stroked-button type="button" class="btn-outline" (click)="saveDraft(formDialog)"
+      [disabled]="saving || draftSaving">
+      {{ draftSaving ? 'Saving...' : 'Save Draft' }}
+    </button>
+    <button mat-stroked-button type="button" class="btn-warn" (click)="cancelDraft()" [disabled]="saving || draftSaving">
+      Delete Draft
+    </button>
+    <button mat-raised-button type="button" class="btn-primary" (click)="submitDraft()"
+      [disabled]="!selected || saving || draftSaving">
+      Submit Draft
+    </button>
+  </mat-dialog-actions>
+</ng-template>
+
+<!-- Cancel confirmation dialog -->
+<ng-template #confirmDialog>
+  <h2 mat-dialog-title>Cancel appointment</h2>
+  <mat-dialog-content>
+    <p>Cancel this appointment? It cannot be undone.</p>
+  </mat-dialog-content>
+  <mat-dialog-actions class="dlg-actions">
+    <button mat-button type="button" (click)="closeForm()" [disabled]="saving">No</button>
+    <button mat-raised-button type="button" class="btn-primary" (click)="confirmDelete()" [disabled]="saving">Yes</button>
+  </mat-dialog-actions>
+</ng-template>

@@ -48,17 +48,21 @@ $shadow: 0 1px 3px rgba(0, 0, 0, .15);
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 8px 12px; border-radius: 3px; margin-bottom: 10px; background: #eef2f7;
   &.msg-error { background: #fdecec; color: #8a1f1f; }
+  &.msg-ok { background: #e7f5ec; color: #1d5c34; }
 }
 
 .list { list-style: none; margin: 0; padding: 0; }
 
 .row {
-  display: grid; grid-template-columns: 150px 1fr auto; gap: 12px; align-items: start;
+  display: grid; grid-template-columns: 150px 1fr auto auto; gap: 12px; align-items: start;
   padding: 11px 0; border-bottom: 1px solid $line;
   strong { display: block; font-weight: 600; }
   span { display: block; color: $muted; font-size: 12px; }
   .notes { margin-top: 2px; font-style: italic; word-break: break-word; }
 }
+
+// per-row action buttons (small gap, wrap on narrow widths)
+.row-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 
 .badge {
   font-size: 11px !important; font-weight: 600; padding: 3px 10px; border-radius: 3px; border: 1px solid; white-space: nowrap;
@@ -69,6 +73,23 @@ $shadow: 0 1px 3px rgba(0, 0, 0, .15);
 }
 
 .empty { text-align: center; color: $muted; padding: 22px 0; }
+
+// ---- dialog (its content is in this component's template, so these styles apply)
+.dlg-body { min-width: 0; }
+.dlg-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.who { margin: 0 0 12px; color: $muted; strong { color: $ink; } }
+.full { width: 100%; }
+
+.slot-block { margin-bottom: 14px; }
+.slot-title { display: block; font-size: 12px; font-weight: 600; color: $navy; margin-bottom: 6px; }
+.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.slot {
+  color: $navy !important; border-color: $navy !important; line-height: 1.2; padding: 6px 4px; text-align: center;
+  small { display: block; font-size: 10px; }
+  &.sel { background-color: $navy !important; color: #fff !important; }
+  &[disabled] { color: #8a94a1 !important; border-color: #cfd5dc !important; text-decoration: line-through; }
+}
+.slot-own { background-color: #e3f2fd !important; color: $navy !important; border-color: $blue !important; font-style: italic; }
 
 // ---- phones
 @media (max-width: 640px) {
@@ -83,9 +104,12 @@ $shadow: 0 1px 3px rgba(0, 0, 0, .15);
 
     .filters { .search, .status { flex: 1 1 100%; } }
 
-    // date and status badge on the first line, details underneath
+    // date and status badge on the first line, details underneath, actions last
     .row { grid-template-columns: 1fr auto; gap: 6px 10px; }
     .row .what { grid-column: 1 / -1; order: 3; }
+    .row .row-actions { grid-column: 1 / -1; order: 4; justify-content: flex-start; }
+
+    .slots { grid-template-columns: repeat(2, 1fr); }
 
     mat-paginator {
     ::ng-deep .mat-paginator-page-size,
@@ -95,3 +119,111 @@ $shadow: 0 1px 3px rgba(0, 0, 0, .15);
     ::ng-deep .mat-mdc-paginator-container { min-height: 44px; justify-content: center; }
     }
 }
+
+// ---- Appointment table (matches counselor Appointments table conventions)
+.table-wrap { overflow-x: auto; margin-top: 8px; }
+
+.appt-table {
+  width: 100%; border-collapse: collapse; font-size: 13px;
+
+  th {
+    background: $navy; color: #fff; font-weight: 600; font-size: 12px;
+    padding: 8px 10px; text-align: left; white-space: nowrap;
+    &:first-child { border-radius: 3px 0 0 0; }
+    &:last-child  { border-radius: 0 3px 0 0; }
+  }
+
+  td {
+    padding: 8px 10px; border-bottom: 1px solid $line; vertical-align: middle;
+    color: $ink;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+
+  // Subtle status row tints (matches the badge palette without being distracting)
+  .row-stpending    td { background: #fafcff; }
+  .row-stapproved   td { background: #fff; }
+  .row-strescheduled td { background: #f8f8ff; }
+  .row-stcompleted  td { background: #f7fdf9; }
+  .row-stnoshow     td { background: #fff9f9; }
+
+  tbody tr:hover td { background: #f0f5fc; }
+}
+
+// Column widths — allow long columns to wrap
+.col-id      { width: 56px;  white-space: nowrap; color: $muted; font-size: 12px; }
+.col-date    { width: 100px; white-space: nowrap; }
+.col-time    { width: 110px; white-space: nowrap; }
+.col-type    { width: 120px; }
+.col-concern { width: 140px; }
+.col-notes   { min-width: 140px; color: $muted; font-size: 12px; word-break: break-word; }
+.col-status  { width: 110px; white-space: nowrap; }
+.col-actions { width: 140px; }
+
+// Appointment type badge (small label beside the type cell)
+.type-badge {
+  display: inline-block; font-size: 11px; font-weight: 600;
+  padding: 2px 7px; border-radius: 3px; border: 1px solid $line;
+  background: $tint; color: $navy;
+}
+
+// "Waiting" label shown next to Rescheduled status when student initiated
+.waiting-label {
+  display: block; font-size: 10px; color: $muted; margin-top: 3px; font-style: italic;
+}
+
+// Smaller action buttons inside the table
+.btn-sm { font-size: 12px !important; padding: 0 10px !important; height: 28px !important; line-height: 26px !important; min-width: 0 !important; }
+
+// ---- Responsive: stack table on narrow screens
+@media (max-width: 700px) {
+  .appt-table, .appt-table thead, .appt-table tbody,
+  .appt-table th, .appt-table td, .appt-table tr { display: block; }
+
+  .appt-table thead tr { display: none; }  // hide header row; labels shown via data-label
+
+  .appt-table tbody tr {
+    border: 1px solid $line; border-radius: 4px;
+    margin-bottom: 10px; padding: 6px 10px;
+    background: #fff;
+  }
+
+  .appt-table td {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    border: none; border-bottom: 1px solid $line; padding: 5px 0;
+    font-size: 13px;
+    &:last-child { border-bottom: none; }
+    &::before {
+      content: attr(data-label);
+      font-weight: 600; color: $navy; font-size: 11px;
+      min-width: 90px; flex-shrink: 0;
+    }
+  }
+}
+
+// ---- Drafts section ----
+.drafts-section { margin-top: 24px; }
+
+.drafts-heading {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 14px; color: $navy; font-weight: 600; margin: 0 0 8px;
+  mat-icon { font-size: 18px; height: 18px; width: 18px; }
+}
+
+.drafts-count {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: $navy; color: #fff; border-radius: 10px;
+  font-size: 11px; font-weight: 700; padding: 1px 7px; min-width: 20px;
+}
+
+.drafts-table { opacity: 0.95; }
+
+.draft-badge {
+  color: #5c4a00 !important; background: #fff8e1; border-color: #f5c842;
+  font-style: italic;
+}
+
+.draft-time-hint { font-size: 11px; color: $muted; margin: -6px 0 8px; font-style: italic; }
+
+// Warn-outlined button for destructive draft actions
+.btn-warn { color: #8a1f1f !important; border-color: #b23b3b !important; }

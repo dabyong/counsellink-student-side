@@ -79,7 +79,7 @@ function rows(body: any, depth: number = 0): any[] {
   if (d === null || d === undefined) { return []; }
   if (Array.isArray(d)) { return d; }
   if (typeof d === 'object') {
-    const inner = depth < 2 ? firstDefined(d, ['data', 'result', 'items']) : undefined;
+    const inner = depth < 2 ? firstDefined(d, ['value', 'data', 'result', 'items']) : undefined;
     if (inner !== undefined && inner !== null) { return rows(inner, depth + 1); }
     return [d];
   }
@@ -127,6 +127,7 @@ export function labelFor(name: string): AppointmentStatus {
   if (n.indexOf('noshow') >= 0) { return 'No-show'; }
   if (n.indexOf('resched') >= 0) { return 'Rescheduled'; }
   if (n.indexOf('complet') >= 0 || n.indexOf('attended') >= 0 || n.indexOf('done') >= 0) { return 'Completed'; }
+  if (n.indexOf('draft') >= 0) { return 'Draft'; }
   // 'Approved' = counselor has approved/confirmed: contains 'approv' or 'confirm', but not 'schedul' or 'pend'
   if ((n.indexOf('approv') >= 0 || n.indexOf('confirm') >= 0) &&
       n.indexOf('schedul') < 0 && n.indexOf('pend') < 0) {
@@ -308,6 +309,16 @@ export class CounselLinkApi {
     return this.getTypes().pipe(map(t => t.map(x => ({ id: String(x.id), name: x.name }))));
   }
 
+  /** GET /api/constants/ConcernType — returns the actual counseling concern options for the booking form. */
+  private concernTypeCache: Named[] = null;
+  getConcernTypes(): Observable<CounselingType[]> {
+    if (this.concernTypeCache) { return of(this.concernTypeCache.map(x => ({ id: String(x.id), name: x.name }))); }
+    return this.constants('ConcernType').pipe(
+      tap(c => { c.sort((a, b) => a.id - b.id); this.concernTypeCache = c; }),
+      map(c => c.map(x => ({ id: String(x.id), name: x.name })))
+    );
+  }
+
   // ------------------------------------------------------------------ slots
 
   /**
@@ -359,11 +370,12 @@ export class CounselLinkApi {
       counselorName: this.counselorName(lk.counselors, counselorId) || String(field(row, 'counselorName') || 'Guidance Counselor'),
       counselingTypeId: typeId === undefined || typeId === null ? '' : String(typeId),
       counselingTypeName: type ? type.name : String(field(row, 'appointmentTypeName') || ''),
+      concernTypeName: String(field(row, 'concernType') || field(row, 'ConcernType') || ''),
       date: toYmd(field(row, 'appointmentDate')),
       startTime: start,
       endTime: endFor(start),
       status: labelFor(statusName),
-      schoolYear: String((this.global as any).syear || ''),
+      schoolYear: String((this.global as any).syear || this.global.constSY || this.global.sy || ''),
       notes: String(field(row, 'concernDescription') || '')
     };
   }
@@ -378,6 +390,7 @@ export class CounselLinkApi {
     return this.studentAppointments(p).pipe(map(all => {
       const term = (q.search || '').trim().toLowerCase();
       const items = all
+        .filter(a => a.status !== 'Draft')   // Draft records (status 5) are managed separately
         .filter(a => !q.status || q.status === 'All' || a.status === q.status)
         .filter(a => !term || (a.counselingTypeName + ' ' + a.counselorName + ' ' + a.date + ' ' + a.notes + ' ' + a.status)
           .toLowerCase().indexOf(term) >= 0)
@@ -389,7 +402,7 @@ export class CounselLinkApi {
 
   getPending(p: StudentProfile): Observable<Appointment> {
     return this.studentAppointments(p).pipe(map(all =>
-      all.filter(a => a.status === 'Pending' || a.status === 'Approved')[0] || null));
+      all.filter(a => a.status === 'Pending' || a.status === 'Approved' || a.status === 'Rescheduled')[0] || null));
   }
 
   book(p: StudentProfile, req: BookingRequest): Observable<Appointment> {
@@ -414,7 +427,9 @@ export class CounselLinkApi {
       };
       return this.send('post', 'appointments/' + id + '/reschedule', body).pipe(
         switchMap(() => this.studentAppointments(p).pipe(map(list => {
-          const found = list.filter(a => a.date === req.date && a.startTime === req.startTime && a.status !== 'Rescheduled')[0]
+          // The backend updates the existing appointment's status to Rescheduled (no new row created;
+          // response is { newId: null, message: "..." }). Re-fetch the same appointment by its ID.
+          const found = list.filter(a => a.id === id)[0]
             || list.filter(a => a.status === 'Pending' || a.status === 'Approved')[0];
           if (!found) {
             throw new Error('Your appointment was rescheduled, but it could not be loaded. Please check your history.');
@@ -438,6 +453,29 @@ export class CounselLinkApi {
         return found;
       })))
     );
+  }
+
+  /**
+   * PUT /api/appointments/{id}/accept-reschedule — body: StudentIdNumberDto { idNumber: string }.
+   * Called when a student accepts a counselor-proposed reschedule.
+   * Returns the updated appointment if re-fetch succeeds.
+   */
+  acceptReschedule(p: StudentProfile, id: number): Observable<Appointment> {
+    return this.send('put', 'appointments/' + id + '/accept-reschedule', { idNumber: p.idNumber }).pipe(
+      switchMap(() => this.studentAppointments(p).pipe(map(list => {
+        const found = list.filter(a => a.id === id)[0];
+        if (!found) { throw new Error('Reschedule accepted, but appointment could not be reloaded. Please check your history.'); }
+        return found;
+      })))
+    );
+  }
+
+  /**
+   * DELETE /api/appointments/{id} — path id only, no body (Swagger: id int32).
+   * send() already routes 'delete' to http.delete(url, options) with no body.
+   */
+  deleteAppointment(id: number): Observable<any> {
+    return this.send('delete', 'appointments/' + id);
   }
 
   /**
@@ -490,7 +528,8 @@ export class CounselLinkApi {
           employeeID: req.counselorId,
           appointmentDate: req.date,
           appointmentTime: req.startTime + ':00',
-          appointmentTypeID: +req.counselingTypeId,
+          appointmentTypeID: 1, // Student Initiated (constant ID 1 from GET /api/constants/AppointmentType)
+          concernTypeID: req.concernTypeId ? +req.concernTypeId : null,
           concernDescription: req.notes || null
         };
         if (pendingId !== null) { body.appointmentStatusID = pendingId; }

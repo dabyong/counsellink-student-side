@@ -12,7 +12,7 @@ export const environment = {
   // CounselLink API (Guidance Counseling micro-service).
   // TODO: replace with the real host once confirmed by the backend team (must end with /api/).
   // e.g. 'https://counsellink.usl.edu.ph/api/'
-  counsellinkApi: ''
+  counsellinkApi: 'https://dave55-001-site1.etempurl.com/api/'
 };
 
 /*
