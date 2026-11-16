@@ -357,11 +357,12 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
 
       // Match the normal booking guard before using the separate draft-submit endpoint.
       // Fail closed if the active-appointment check cannot be completed.
-      this.guidance.getPending().subscribe(
-        active => {
+      this.guidance.getHistory({ pageIndex: 0, pageSize: 1000, status: 'All', search: '' }).subscribe(
+        history => {
+          const active = history.items.find(a => a.status === 'Pending' || a.status === 'Approved');
           if (active) {
             this.draftSaving = false;
-            this.draftError = 'You already have an active appointment. Reschedule it or attend it before submitting another request.';
+            this.draftError = 'You already have a pending appointment. Reschedule it or attend it before submitting another request.';
             return;
           }
           this.persistAndSubmitDraft(latestDraft, sid);
