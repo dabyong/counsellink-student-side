@@ -401,6 +401,17 @@ export class CounselLinkApi {
     }));
   }
 
+  /** Uses the exact Pending/Approved rule enforced by normal booking, for draft-submit prechecks too. */
+  hasPendingAppointment(p: StudentProfile): Observable<boolean> {
+    return this.studentAppointments(p).pipe(map(all => this.hasBookingRestriction(all, null)));
+  }
+
+  private hasBookingRestriction(appointments: Appointment[], replaceId: number): boolean {
+    return appointments.some(a =>
+      (a.status === 'Pending' || a.status === 'Approved') && a.id !== replaceId
+    );
+  }
+
   getPending(p: StudentProfile): Observable<Appointment> {
     return this.studentAppointments(p).pipe(map(all =>
       all.filter(a => a.status === 'Pending' || a.status === 'Approved' || a.status === 'Rescheduled')[0] || null));
@@ -570,7 +581,7 @@ export class CounselLinkApi {
     return forkJoin(this.studentAppointments(p), this.getTakenStarts(req.counselorId, req.date), this.getStatuses())
       .pipe(switchMap(r => {
         const mine = r[0], taken = r[1], statuses = r[2];
-        if (mine.some(a => (a.status === 'Pending' || a.status === 'Approved') && a.id !== replaceId)) {
+        if (this.hasBookingRestriction(mine, replaceId)) {
           return throwError(new Error('You already have a pending appointment. Reschedule it or attend it before booking another.'));
         }
         if (mine.some(a => a.id !== replaceId && a.status !== 'Rescheduled' && a.date === req.date && a.startTime === req.startTime)) {
