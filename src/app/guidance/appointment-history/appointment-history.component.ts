@@ -355,29 +355,47 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
       };
       const sid = this.studentId;
 
-      // 1. Persist all edits to the backend, then 2. submit.
-      this.draftSvc.updateDraft(latestDraft, sid).pipe(
-        switchMap(() => this.draftSvc.submitDraft(latestDraft.id, sid))
-      ).subscribe(
+      // Match the normal booking guard before using the separate draft-submit endpoint.
+      // Fail closed if the active-appointment check cannot be completed.
+      this.guidance.getPending().subscribe(
+        active => {
+          if (active) {
+            this.draftSaving = false;
+            this.draftError = 'You already have an active appointment. Reschedule it or attend it before submitting another request.';
+            return;
+          }
+          this.persistAndSubmitDraft(latestDraft, sid);
+        },
         () => {
           this.draftSaving = false;
-          this.activeDraft = null;
-          if (this.dialogRef) { this.dialogRef.close(); }
-          // Backend transitions status 5 → 1 — refresh both lists.
-          this.loadDrafts();
-          this.load();
-          this.notice = 'Appointment request sent to your counselor.';
-        },
-        e => {
-          this.draftSaving = false;
-          if (this.handlePendingRescheduleConflict(e)) {
-            this.draftError = '';
-          } else {
-            this.draftError = (e && e.message) ? e.message : 'Could not submit the draft. Please try again.';
-          }
+          this.draftError = 'Could not verify your current appointments. Please try again before submitting this draft.';
         }
       );
     });
+  }
+
+  /** Persist draft edits and submit only after the active-appointment precheck passes. */
+  private persistAndSubmitDraft(latestDraft: AppointmentDraft, sid: string) {
+    this.draftSvc.updateDraft(latestDraft, sid).pipe(
+      switchMap(() => this.draftSvc.submitDraft(latestDraft.id, sid))
+    ).subscribe(
+      () => {
+        this.draftSaving = false;
+        this.activeDraft = null;
+        if (this.dialogRef) { this.dialogRef.close(); }
+        this.loadDrafts();
+        this.load();
+        this.notice = 'Appointment request sent to your counselor.';
+      },
+      e => {
+        this.draftSaving = false;
+        if (this.handlePendingRescheduleConflict(e)) {
+          this.draftError = '';
+        } else {
+          this.draftError = (e && e.message) ? e.message : 'Could not submit the draft. Please try again.';
+        }
+      }
+    );
   }
 
   /** Close the Edit Draft dialog without saving; confirm first if the student changed anything. */
