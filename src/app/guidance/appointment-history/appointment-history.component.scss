@@ -65,7 +65,11 @@ $shadow: 0 1px 3px rgba(0, 0, 0, .15);
 }
 
 // per-row action buttons (small gap, wrap on narrow widths)
-.row-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.row-actions { display: flex; flex-direction: row; flex-wrap: nowrap; gap: 6px; align-items: center; white-space: nowrap; }
+
+// Keep action buttons side by side in the mobile card layout as well.
+.appt-table td.col-actions .row-actions { flex: 0 0 auto; margin-left: auto; }
+.appt-table td.col-actions .row-actions button { flex: 0 0 auto; }
 
 .badge {
   font-size: 11px !important; font-weight: 600; padding: 3px 10px; border-radius: 3px; border: 1px solid; white-space: nowrap;
