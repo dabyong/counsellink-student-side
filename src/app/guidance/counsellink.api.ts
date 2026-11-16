@@ -441,6 +441,26 @@ export class CounselLinkApi {
   }
 
   /**
+   * PUT /api/appointments/{id}/confirm — ConfirmAppointmentDto.
+   * Used for counselor-initiated requests: the counselor employee ID and the
+   * appointment's scheduled date/time are sent to the API's counselor confirm action.
+   */
+  counselorConfirm(p: StudentProfile, appointment: Appointment): Observable<Appointment> {
+    const body = {
+      employeeID: appointment.counselorId,
+      confirmedDate: appointment.date,
+      confirmedTime: appointment.startTime
+    };
+    return this.send('put', 'appointments/' + appointment.id + '/confirm', body).pipe(
+      switchMap(() => this.studentAppointments(p).pipe(map(list => {
+        const found = list.filter(a => a.id === appointment.id)[0];
+        if (!found) { throw new Error('Appointment accepted, but could not be reloaded. Please check your history.'); }
+        return found;
+      })))
+    );
+  }
+
+  /**
    * PUT /api/appointments/{id}/student-confirm — body: StudentIdNumberDto { idNumber: string }.
    * Called when a student confirms a counselor-approved appointment.
    * Returns the updated appointment if re-fetch succeeds.
