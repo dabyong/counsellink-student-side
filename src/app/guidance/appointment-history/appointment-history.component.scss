@@ -240,3 +240,28 @@ $shadow: 0 1px 3px rgba(0, 0, 0, .15);
 
 // Warn-outlined button for destructive draft actions
 .btn-warn { color: #8a1f1f !important; border-color: #b23b3b !important; }
+
+// Consistent hover/focus feedback for all Draft tab actions, including the
+// draft-list Edit/Delete buttons and the buttons in the Edit Draft dialog.
+.drafts-section .row-actions button,
+.draft-dialog-actions button {
+  transition: background-color .18s ease, color .18s ease, border-color .18s ease;
+
+  &:hover:not([disabled]):not(.btn-warn),
+  &:focus-visible:not([disabled]):not(.btn-warn) {
+    background-color: $navy !important;
+    border-color: $navy !important;
+    color: #fff !important;
+
+    .mat-icon { color: #fff !important; }
+  }
+
+  &.btn-warn:hover:not([disabled]),
+  &.btn-warn:focus-visible:not([disabled]) {
+    background-color: #8a1f1f !important;
+    border-color: #8a1f1f !important;
+    color: #fff !important;
+
+    .mat-icon { color: #fff !important; }
+  }
+}
