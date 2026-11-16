@@ -147,6 +147,18 @@ export class GuidanceService {
     });
   }
 
+  /** Reuses the normal booking Pending/Approved restriction for draft submissions. */
+  hasPendingAppointment(): Observable<boolean> {
+    return new Observable(obs => {
+      this.getStudentProfile().subscribe(p => {
+        this.api.hasPendingAppointment(p).subscribe(
+          blocked => { obs.next(blocked); obs.complete(); },
+          e => obs.error(e)
+        );
+      }, e => obs.error(e));
+    });
+  }
+
   /** REAL: POST /api/appointments. */
   book(req: BookingRequest): Observable<Appointment> {
     return new Observable(obs => {
