@@ -7,7 +7,7 @@
     </div>
     <div class="actions">
       <button mat-raised-button type="button" class="btn-primary" [disabled]="!counselor || !!counselorError"
-        [matTooltip]="counselorError" (click)="openBook(formDialog)">
+        [matTooltip]="counselorError || 'New appointment'" (click)="openBook(formDialog)">
         <mat-icon>add</mat-icon> New Appointment
       </button>
     </div>
@@ -43,17 +43,17 @@
 
       <div class="msg msg-error" *ngIf="error">
         <span>{{ error }}</span>
-        <button mat-stroked-button type="button" class="btn-outline" (click)="load()">Try again</button>
+        <button mat-stroked-button type="button" class="btn-outline" matTooltip="Retry loading appointments" (click)="load()">Try again</button>
       </div>
 
       <div class="msg msg-error" *ngIf="actionError">
         <span>{{ actionError }}</span>
-        <button mat-stroked-button type="button" class="btn-outline" (click)="actionError=''">Dismiss</button>
+        <button mat-stroked-button type="button" class="btn-outline" matTooltip="Dismiss error" (click)="actionError=''">Dismiss</button>
       </div>
 
       <div class="msg msg-ok" *ngIf="notice">
         <span>{{ notice }}</span>
-        <button mat-stroked-button type="button" class="btn-outline" (click)="notice=''">Dismiss</button>
+        <button mat-stroked-button type="button" class="btn-outline" matTooltip="Dismiss notification" (click)="notice=''">Dismiss</button>
       </div>
 
       <div class="table-wrap" *ngIf="!loading && !error && items.length">
@@ -87,10 +87,10 @@
                 <div class="row-actions">
                   <ng-container *ngIf="a.status === 'Pending'">
                     <button *ngIf="isCounselorInitiated(a)"
-                      mat-raised-button type="button" class="btn-primary btn-sm"
-                      [disabled]="actionLoading"
+                      mat-stroked-button type="button" class="btn-outline btn-sm btn-icon"
+                      [disabled]="actionLoading" matTooltip="Accept appointment"
                       (click)="confirmCounselorInitiated(a)">
-                      <mat-icon>check</mat-icon> {{ actionLoading ? 'Accepting...' : 'Accept' }}
+                      <mat-icon>check</mat-icon>
                     </button>
                     <button *ngIf="!isCounselorInitiated(a)" mat-stroked-button type="button" class="btn-outline btn-sm btn-icon" [disabled]="actionLoading"
                       (click)="openReschedule(a, formDialog)" matTooltip="Edit appointment"><mat-icon>edit</mat-icon></button>
@@ -100,10 +100,10 @@
                       (click)="requestDelete(a)"><mat-icon>cancel</mat-icon></button>
                   </ng-container>
                   <ng-container *ngIf="a.status === 'Approved'">
-                    <button mat-stroked-button type="button" class="btn-outline btn-sm" [disabled]="actionLoading"
-                      (click)="openReschedule(a, formDialog)"><mat-icon>repeat</mat-icon></button>
-                    <button mat-stroked-button type="button" class="btn-outline btn-sm" [disabled]="actionLoading || confirmedIds.has(a.id)"
-                      (click)="confirmAppointment(a)"><mat-icon>check</mat-icon></button>
+                    <button mat-stroked-button type="button" class="btn-outline btn-sm btn-icon" [disabled]="actionLoading"
+                      (click)="openReschedule(a, formDialog)" matTooltip="Reschedule appointment"><mat-icon>repeat</mat-icon></button>
+                    <button mat-stroked-button type="button" class="btn-outline btn-sm btn-icon" [disabled]="actionLoading || confirmedIds.has(a.id)"
+                      (click)="confirmAppointment(a)" matTooltip="Confirm appointment"><mat-icon>check</mat-icon></button>
                   </ng-container>
                   <ng-container *ngIf="a.status === 'Rescheduled'">
                     <span class="waiting-label">Waiting for counselor</span>
@@ -148,10 +148,10 @@
               </td>
               <td class="col-actions" data-label="Actions">
                 <div class="row-actions">
-                  <button mat-raised-button type="button" class="btn-primary btn-sm"
-                    (click)="openDraft(d, formDialog)">Edit</button>
-                  <button mat-stroked-button type="button" class="btn-outline btn-sm"
-                    (click)="deleteDraftFromList(d)">Delete</button>
+                  <button mat-stroked-button type="button" class="btn-outline btn-sm btn-icon" matTooltip="Edit draft"
+                    (click)="openDraft(d, formDialog)"><mat-icon>edit</mat-icon></button>
+                  <button mat-stroked-button type="button" class="btn-outline btn-sm btn-icon" matTooltip="Delete draft"
+                    (click)="deleteDraftFromList(d)"><mat-icon>cancel</mat-icon></button>
                 </div>
               </td>
             </tr>
@@ -201,7 +201,7 @@
       <div class="slots" *ngIf="slots.length">
         <button type="button" mat-stroked-button class="slot" *ngFor="let s of slots"
           [class.sel]="selected === s" [class.slot-own]="s.status === 'Own'"
-          [disabled]="s.status !== 'Available'" (click)="pick(s)">
+          [disabled]="s.status !== 'Available'" matTooltip="Select this time slot" (click)="pick(s)">
           {{ slotLabel(s) }}
         </button>
       </div>
@@ -219,20 +219,20 @@
 
   <!-- Normal booking mode: Book + Save as Draft -->
   <mat-dialog-actions class="dlg-actions" *ngIf="!isDraftMode && mode === 'book'">
-    <button mat-button type="button" (click)="closeForm()" [disabled]="saving || draftSaving">Cancel</button>
+    <button mat-button type="button" (click)="closeForm()" [disabled]="saving || draftSaving" matTooltip="Close without saving">Cancel</button>
     <button mat-stroked-button type="button" class="btn-outline" (click)="saveDraft(formDialog)"
-      [disabled]="saving || draftSaving">
+      [disabled]="saving || draftSaving" matTooltip="Save appointment as a draft">
       {{ draftSaving ? 'Saving...' : 'Save as Draft' }}
     </button>
-    <button mat-raised-button type="button" class="btn-primary" (click)="submit()" [disabled]="!canSubmit">
+    <button mat-raised-button type="button" class="btn-primary" (click)="submit()" [disabled]="!canSubmit" matTooltip="Book appointment">
       {{ saving ? 'Saving...' : 'Book' }}
     </button>
   </mat-dialog-actions>
 
   <!-- Edit appointment: retain time-slot selection and submit the concern changes together. -->
   <mat-dialog-actions class="dlg-actions" *ngIf="!isDraftMode && mode === 'reschedule'">
-    <button mat-button type="button" (click)="closeForm()" [disabled]="saving">Cancel</button>
-    <button mat-raised-button type="button" class="btn-primary" (click)="submit()" [disabled]="!canSubmit">
+    <button mat-button type="button" (click)="closeForm()" [disabled]="saving" matTooltip="Close without saving">Cancel</button>
+    <button mat-raised-button type="button" class="btn-primary" (click)="submit()" [disabled]="!canSubmit" matTooltip="Submit appointment changes">
       <ng-container *ngIf="editingConcernDetails"><mat-icon>check</mat-icon> {{ saving ? 'Submitting...' : 'Submit Changes' }}</ng-container>
       <ng-container *ngIf="!editingConcernDetails">{{ saving ? 'Saving...' : 'Reschedule' }}</ng-container>
     </button>
@@ -240,16 +240,16 @@
 
   <!-- Draft editing mode: Submit Draft + Cancel Draft + Save -->
   <mat-dialog-actions class="dlg-actions draft-dialog-actions" *ngIf="isDraftMode">
-    <button mat-button type="button" (click)="cancelDraftEdit()" [disabled]="saving || draftSaving">Cancel</button>
+    <button mat-button type="button" (click)="cancelDraftEdit()" [disabled]="saving || draftSaving" matTooltip="Close draft without saving">Cancel</button>
     <button mat-stroked-button type="button" class="btn-outline" (click)="saveDraft(formDialog)"
-      [disabled]="saving || draftSaving">
+      [disabled]="saving || draftSaving" matTooltip="Save draft changes">
       {{ draftSaving ? 'Saving...' : 'Save Draft' }}
     </button>
-    <button mat-stroked-button type="button" class="btn-warn" (click)="cancelDraft()" [disabled]="saving || draftSaving">
+    <button mat-stroked-button type="button" class="btn-warn" (click)="cancelDraft()" [disabled]="saving || draftSaving" matTooltip="Delete this draft">
       Delete Draft
     </button>
     <button mat-raised-button type="button" class="btn-primary" (click)="submitDraft()"
-      [disabled]="!selected || saving || draftSaving">
+      [disabled]="!selected || saving || draftSaving" matTooltip="Submit this draft as an appointment">
       Submit Draft
     </button>
   </mat-dialog-actions>
@@ -262,7 +262,7 @@
     <p>Cancel this appointment? It cannot be undone.</p>
   </mat-dialog-content>
   <mat-dialog-actions class="dlg-actions">
-    <button mat-button type="button" (click)="closeForm()" [disabled]="saving">No</button>
-    <button mat-raised-button type="button" class="btn-primary" (click)="confirmDelete()" [disabled]="saving">Yes</button>
+    <button mat-button type="button" (click)="closeForm()" [disabled]="saving" matTooltip="Keep appointment">No</button>
+    <button mat-raised-button type="button" class="btn-primary" (click)="confirmDelete()" [disabled]="saving" matTooltip="Confirm cancellation">Yes</button>
   </mat-dialog-actions>
 </ng-template>
