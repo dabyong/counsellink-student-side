@@ -86,27 +86,24 @@
               <td class="col-actions" data-label="Actions">
                 <div class="row-actions">
                   <ng-container *ngIf="a.status === 'Pending'">
-                    <button *ngIf="isCounselorInitiated(a)"
-                      mat-stroked-button type="button" class="btn-outline btn-sm btn-icon"
-                      [disabled]="actionLoading" matTooltip="Accept appointment"
-                      (click)="confirmCounselorInitiated(a)">
-                      <mat-icon>check</mat-icon>
-                    </button>
-                    <button *ngIf="!isCounselorInitiated(a)" mat-stroked-button type="button" class="btn-outline btn-sm btn-icon" [disabled]="actionLoading"
-                      (click)="openReschedule(a, formDialog)" matTooltip="Edit appointment"><mat-icon>edit</mat-icon></button>
-                    <button *ngIf="isCounselorInitiated(a)" mat-stroked-button type="button" class="btn-outline btn-sm btn-icon" [disabled]="actionLoading"
-                      (click)="openReschedule(a, formDialog)" matTooltip="Reschedule appointment"><mat-icon>repeat</mat-icon></button>
-                    <button mat-stroked-button type="button" matTooltip="Cancel appointment" class="btn-outline btn-sm btn-icon" [disabled]="actionLoading"
+                    <!-- Pending means the counselor has not confirmed the proposed time yet.
+                         Students may withdraw the request, but cannot reschedule it themselves. -->
+                    <button mat-stroked-button type="button" matTooltip="Cancel appointment"
+                      class="btn-outline btn-sm btn-icon" [disabled]="actionLoading"
                       (click)="requestDelete(a)"><mat-icon>cancel</mat-icon></button>
                   </ng-container>
-                  <ng-container *ngIf="a.status === 'Approved'">
-                    <button mat-stroked-button type="button" class="btn-outline btn-sm btn-icon" [disabled]="actionLoading"
-                      (click)="openReschedule(a, formDialog)" matTooltip="Reschedule appointment"><mat-icon>repeat</mat-icon></button>
-                    <button mat-stroked-button type="button" class="btn-outline btn-sm btn-icon" [disabled]="actionLoading || confirmedIds.has(a.id)"
+                  <ng-container *ngIf="a.status === 'Approved' && isCounselorInitiated(a)">
+                    <!-- Counselor has confirmed the initial slot; student confirmation is the only action. -->
+                    <button mat-stroked-button type="button" class="btn-outline btn-sm btn-icon"
+                      [disabled]="actionLoading || confirmedIds.has(a.id)"
                       (click)="confirmAppointment(a)" matTooltip="Confirm appointment"><mat-icon>check</mat-icon></button>
                   </ng-container>
+                  <ng-container *ngIf="a.status === 'Approved' && !isCounselorInitiated(a)">
+                    <!-- Student-initiated + counselor-approved is already mutually confirmed. -->
+                    <span class="waiting-label">Confirmed by counselor</span>
+                  </ng-container>
                   <ng-container *ngIf="a.status === 'Rescheduled'">
-                    <span class="waiting-label">Waiting for counselor</span>
+                    <span class="waiting-label">Reschedule awaiting confirmation</span>
                   </ng-container>
                 </div>
               </td>
