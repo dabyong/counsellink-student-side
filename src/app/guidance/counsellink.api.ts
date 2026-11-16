@@ -370,6 +370,7 @@ export class CounselLinkApi {
       counselorName: this.counselorName(lk.counselors, counselorId) || String(field(row, 'counselorName') || 'Guidance Counselor'),
       counselingTypeId: typeId === undefined || typeId === null ? '' : String(typeId),
       counselingTypeName: type ? type.name : String(field(row, 'appointmentTypeName') || ''),
+      concernTypeId: String(field(row, 'concernTypeID') || ''),
       concernTypeName: String(field(row, 'concernType') || field(row, 'ConcernType') || ''),
       date: toYmd(field(row, 'appointmentDate')),
       startTime: start,
@@ -437,6 +438,44 @@ export class CounselLinkApi {
           return found;
         })))
       );
+    }));
+  }
+
+  /**
+   * Update a student's concern category and description through the existing appointment update route.
+   * Preserve the current status, attendance status, and reschedule note from the loaded API row.
+   */
+  updateConcernDetails(id: number, concernTypeId: string, concernDescription: string): Observable<Appointment> {
+    const current = this.raw[id];
+    if (!current) { return throwError(new Error('Appointment details are no longer available. Please refresh and try again.')); }
+    const statusId = field(current, 'appointmentStatusID');
+    const attendanceId = field(current, 'attendanceStatusID');
+    if (statusId === undefined || statusId === null || attendanceId === undefined || attendanceId === null) {
+      return throwError(new Error('The appointment status details could not be loaded. Please refresh and try again.'));
+    }
+    const body = {
+      appointmentStatusID: +statusId,
+      attendanceStatusID: +attendanceId,
+      rescheduleNote: firstDefined(current, ['rescheduleNote']) || null,
+      concernDescription: concernDescription,
+      concernTypeID: concernTypeId ? +concernTypeId : null
+    };
+    return this.send('put', 'appointments/' + id, body).pipe(
+      switchMap(() => this.studentAppointmentsFromCurrentStudent(id))
+    );
+  }
+
+  private studentAppointmentsFromCurrentStudent(id: number): Observable<Appointment> {
+    const studentId = String(field(this.raw[id], 'idNumber') || '');
+    if (!studentId) { return throwError(new Error('Could not identify the appointment owner. Please refresh and try again.')); }
+    const profile: StudentProfile = {
+      idNumber: studentId, fullName: '', course: '', courseCode: '', departmentCode: '',
+      departmentName: '', departmentId: '', yearLevel: 0, level: '', enrollmentStatus: '', schoolYear: ''
+    };
+    return this.studentAppointments(profile).pipe(map(list => {
+      const updated = list.filter(a => a.id === id)[0];
+      if (!updated) { throw new Error('Your changes were submitted, but the appointment could not be reloaded.'); }
+      return updated;
     }));
   }
 
