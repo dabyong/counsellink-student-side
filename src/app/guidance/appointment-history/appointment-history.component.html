@@ -93,7 +93,7 @@
                       <mat-icon>check</mat-icon> {{ actionLoading ? 'Accepting...' : 'Accept' }}
                     </button>
                     <button mat-stroked-button type="button" class="btn-outline btn-sm" [disabled]="actionLoading"
-                      (click)="openReschedule(a, formDialog)"><mat-icon>repeat</mat-icon></button>
+                      (click)="openReschedule(a, formDialog)" matTooltip="Edit appointment"><mat-icon>edit</mat-icon></button>
                     <button mat-stroked-button type="button" class="btn-outline btn-sm" [disabled]="actionLoading"
                       (click)="requestDelete(a)"><mat-icon>cancel</mat-icon></button>
                   </ng-container>
@@ -172,17 +172,17 @@
   <mat-dialog-content class="dlg-body">
     <p class="who" *ngIf="counselor">Counselor: <strong>{{ counselor?.name }}</strong></p>
 
-    <mat-form-field appearance="fill" class="full" *ngIf="mode === 'book'">
+    <mat-form-field appearance="fill" class="full" *ngIf="mode === 'book' || mode === 'reschedule'">
       <mat-label>Concern type</mat-label>
       <mat-select [(ngModel)]="form.concernTypeId">
         <mat-option *ngFor="let t of concernTypes" [value]="t.id">{{ t.name }}</mat-option>
       </mat-select>
     </mat-form-field>
-    <p class="who" *ngIf="mode === 'reschedule' && target">Type: <strong>{{ target?.counselingTypeName }}</strong></p>
+    <p class="who" *ngIf="mode === 'reschedule' && target">Appointment type: <strong>{{ target?.counselingTypeName }}</strong></p>
 
     <mat-form-field appearance="fill" class="full">
       <mat-label>Date</mat-label>
-      <input matInput type="date" [(ngModel)]="form.date" [min]="minDate" (ngModelChange)="onDateChange()">
+      <input matInput type="date" [(ngModel)]="form.date" [min]="minDate" [readonly]="mode === 'reschedule'" (ngModelChange)="onDateChange()">
     </mat-form-field>
 
     <!-- Draft: show saved time hint when slots haven't loaded yet -->
@@ -203,9 +203,9 @@
       <p class="empty" *ngIf="!slotsLoading && !slots.length && form.date">No slots available on this date.</p>
     </div>
 
-    <mat-form-field appearance="fill" class="full" *ngIf="mode === 'book'">
-      <mat-label>Notes</mat-label>
-      <textarea matInput [(ngModel)]="form.notes" rows="3" placeholder="Optional note for the counselor"></textarea>
+    <mat-form-field appearance="fill" class="full" *ngIf="mode === 'book' || mode === 'reschedule'">
+      <mat-label>Reason for appointment</mat-label>
+      <textarea matInput [(ngModel)]="form.notes" rows="3" placeholder="Describe the reason for your appointment"></textarea>
     </mat-form-field>
 
     <div class="msg msg-error" *ngIf="formError">{{ formError }}</div>
@@ -224,11 +224,11 @@
     </button>
   </mat-dialog-actions>
 
-  <!-- Normal reschedule mode: original single button -->
+  <!-- Edit appointment: retain time-slot selection and submit the concern changes together. -->
   <mat-dialog-actions class="dlg-actions" *ngIf="!isDraftMode && mode === 'reschedule'">
     <button mat-button type="button" (click)="closeForm()" [disabled]="saving">Cancel</button>
     <button mat-raised-button type="button" class="btn-primary" (click)="submit()" [disabled]="!canSubmit">
-      {{ saving ? 'Saving...' : 'Reschedule' }}
+      <mat-icon>check</mat-icon> {{ saving ? 'Submitting...' : 'Submit Changes' }}
     </button>
   </mat-dialog-actions>
 
