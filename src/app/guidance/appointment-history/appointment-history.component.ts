@@ -166,6 +166,11 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
 
   statusClass(a: Appointment): string { return 'st-' + a.status.toLowerCase().replace(/-/g, ''); }
 
+  /** True only for appointments created by the counselor. */
+  isCounselorInitiated(a: Appointment): boolean {
+    return (a.counselingTypeName || '').trim().toLowerCase() === 'counselor initiated';
+  }
+
   // ----------------------------------------------------------- booking dialog
 
   openBook(tpl: TemplateRef<any>) {
