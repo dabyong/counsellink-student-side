@@ -29,8 +29,8 @@ const routes: Routes = [
       // because My Portal's main is not lazy-loaded and forChild would register at root).
       // Appointment History is the primary appointment page; the old scheduler/history routes redirect to it.
       { path: 'guidance-appointments', component: AppointmentHistoryComponent, outlet: 'div' },
-      { path: 'guidance-scheduler', redirectTo: 'guidance-appointments', outlet: 'div' },
-      { path: 'guidance-history', redirectTo: 'guidance-appointments', outlet: 'div' },
+      { path: 'guidance-scheduler', redirectTo: 'guidance-appointments' },
+      { path: 'guidance-history', redirectTo: 'guidance-appointments' },
       { path: 'guidance-api-integration', component: ApiIntegrationComponent, outlet: 'div' }
     ]
   },
