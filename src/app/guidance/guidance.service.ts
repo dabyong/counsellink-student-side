@@ -200,6 +200,15 @@ export class GuidanceService {
   }
 
   /**
+   * Confirm a counselor-initiated Pending appointment via PUT /api/appointments/{id}/confirm.
+   */
+  confirmCounselorInitiated(appointment: Appointment): Observable<Appointment> {
+    return this.getStudentProfile().pipe(
+      switchMap(p => this.api.counselorConfirm(p, appointment))
+    );
+  }
+
+  /**
    * Accept a counselor-proposed reschedule.
    * LIVE: PUT /api/appointments/{id}/accept-reschedule → body: { idNumber }.
    * A live failure is never silently replaced with mock success.
