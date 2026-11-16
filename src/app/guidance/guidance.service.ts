@@ -169,6 +169,11 @@ export class GuidanceService {
     });
   }
 
+  /** Update concern type and reason while preserving the appointment's current status. */
+  updateConcernDetails(id: number, concernTypeId: string, concernDescription: string): Observable<Appointment> {
+    return this.api.updateConcernDetails(id, concernTypeId, concernDescription);
+  }
+
   /**
    * Confirm an 'Approved' appointment.
    * LIVE: calls PUT /api/appointments/{id}/student-confirm.
