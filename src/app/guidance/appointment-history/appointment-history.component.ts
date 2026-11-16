@@ -403,6 +403,27 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
     return this.guidance.formatTime(d.startTime) + (d.endTime ? ' – ' + this.guidance.formatTime(d.endTime) : '');
   }
 
+  /** Accept a counselor-initiated Pending appointment using the API's counselor confirm route. */
+  confirmCounselorInitiated(a: Appointment) {
+    if (this.actionLoading || !this.isCounselorInitiated(a) || a.status !== 'Pending') { return; }
+    this.actionLoading = true;
+    this.actionError = '';
+    this.notice = '';
+    this.guidance.confirmCounselorInitiated(a).subscribe(
+      (updated: Appointment) => {
+        this.actionLoading = false;
+        const idx = this.items.findIndex(x => x.id === updated.id);
+        if (idx >= 0) { this.items[idx] = updated; }
+        this.notice = 'Counselor-initiated appointment accepted.';
+        this.load();
+      },
+      e => {
+        this.actionLoading = false;
+        this.actionError = (e && e.message) ? e.message : 'Could not accept the appointment.';
+      }
+    );
+  }
+
   /** Confirm an 'Approved' (counselor-proposed) appointment: PUT /api/appointments/{id}/student-confirm. */
   confirmAppointment(a: Appointment) {
     if (this.actionLoading || this.confirmedIds.has(a.id)) { return; }
