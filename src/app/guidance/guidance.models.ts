@@ -60,6 +60,7 @@ export interface Appointment {
   counselorName: string;
   counselingTypeId: string;
   counselingTypeName: string;  // AppointmentType: Student Initiated / Counselor Initiated / Walk-in / Referred
+  concernTypeId: string;
   concernTypeName: string;     // ConcernType: Academic Concerns / Family Issues etc. — from API row
   date: string;        // 'YYYY-MM-DD'
   startTime: string;   // 'HH:mm'
