@@ -188,6 +188,10 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
     this.activeDraft = null;   // ensure normal reschedule mode
     this.mode = 'reschedule';
     this.resetForm();
+    this.form.concernTypeId = a.concernTypeId || (this.concernTypes.find(t => t.name === a.concernTypeName) || { id: '' }).id;
+    this.form.notes = a.notes || '';
+    this.form.date = a.date;
+    this.onDateChange();
     this.openDialog(tpl);
   }
 
@@ -587,7 +591,7 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
     if (this.mode === 'book') {
       return !!this.selected && !!this.form.date && !!this.form.concernTypeId && !!this.form.notes.trim() && !this.saving;
     }
-    return !!this.selected && !!this.form.date && !this.saving;
+    return !!this.selected && !!this.form.date && !!this.form.concernTypeId && !!this.form.notes.trim() && !this.saving;
   }
 
   submit() {
@@ -623,21 +627,29 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
         startTime: s.startTime,
         endTime: s.endTime
       };
-      this.guidance.reschedule(this.target.id, req).subscribe(
-        (updated: Appointment) => {
-          this.saving = false;
-          if (this.dialogRef) { this.dialogRef.close(); }
-          // Track this as student-initiated so "Accept Reschedule" is suppressed.
-          this.rescheduledByStudentIds.add(this.target.id);
-          // Patch the item in the list immediately with the returned state.
-          const idx = this.items.findIndex(x => x.id === updated.id);
-          if (idx >= 0) { this.items[idx] = updated; }
-          this.notice = 'Reschedule request sent. Waiting for counselor confirmation.';
-          this.load();
+      const appointmentId = this.target.id;
+      this.guidance.updateConcernDetails(appointmentId, this.form.concernTypeId, this.form.notes.trim()).subscribe(
+        () => {
+          this.guidance.reschedule(appointmentId, req).subscribe(
+            (updated: Appointment) => {
+              this.saving = false;
+              if (this.dialogRef) { this.dialogRef.close(); }
+              // Keep the existing reschedule workflow and its counselor-review status behavior.
+              this.rescheduledByStudentIds.add(appointmentId);
+              const idx = this.items.findIndex(x => x.id === updated.id);
+              if (idx >= 0) { this.items[idx] = updated; }
+              this.notice = 'Changes submitted. Your updated appointment is waiting for counselor review.';
+              this.load();
+            },
+            e => {
+              this.saving = false;
+              this.formError = (e && e.message) ? e.message : 'Something went wrong. Please try again.';
+            }
+          );
         },
         e => {
           this.saving = false;
-          this.formError = (e && e.message) ? e.message : 'Something went wrong. Please try again.';
+          this.formError = (e && e.message) ? e.message : 'Could not update the concern details. Please try again.';
         }
       );
     }
