@@ -92,11 +92,11 @@
                       (click)="confirmCounselorInitiated(a)">
                       <mat-icon>check</mat-icon> {{ actionLoading ? 'Accepting...' : 'Accept' }}
                     </button>
-                    <button *ngIf="!isCounselorInitiated(a)" mat-stroked-button type="button" class="btn-outline btn-sm" [disabled]="actionLoading"
+                    <button *ngIf="!isCounselorInitiated(a)" mat-stroked-button type="button" class="btn-outline btn-sm btn-icon" [disabled]="actionLoading"
                       (click)="openReschedule(a, formDialog)" matTooltip="Edit appointment"><mat-icon>edit</mat-icon></button>
-                    <button *ngIf="isCounselorInitiated(a)" mat-stroked-button type="button" class="btn-outline btn-sm" [disabled]="actionLoading"
+                    <button *ngIf="isCounselorInitiated(a)" mat-stroked-button type="button" class="btn-outline btn-sm btn-icon" [disabled]="actionLoading"
                       (click)="openReschedule(a, formDialog)" matTooltip="Reschedule appointment"><mat-icon>repeat</mat-icon></button>
-                    <button mat-stroked-button type="button" class="btn-outline btn-sm" [disabled]="actionLoading"
+                    <button mat-stroked-button type="button" class="btn-outline btn-sm btn-icon" [disabled]="actionLoading"
                       (click)="requestDelete(a)"><mat-icon>cancel</mat-icon></button>
                   </ng-container>
                   <ng-container *ngIf="a.status === 'Approved'">
