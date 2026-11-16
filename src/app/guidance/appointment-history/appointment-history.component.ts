@@ -66,6 +66,8 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
   activeDraft: AppointmentDraft | null = null;
   draftSaving = false;
   draftError = '';
+  /** Snapshot used to warn before discarding edits to an existing draft. */
+  private draftEditSnapshot = '';
   /** True when the form dialog is open in draft-edit mode. */
   get isDraftMode(): boolean { return this.activeDraft !== null; }
 
@@ -259,6 +261,15 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
     this.activeDraft = draft;
     this.draftError = '';
 
+    // Capture the original values so Cancel can distinguish closing from discarding edits.
+    this.draftEditSnapshot = JSON.stringify({
+      concernTypeId: draft.concernTypeId || '',
+      date: draft.date || '',
+      notes: draft.notes || '',
+      startTime: draft.startTime || '',
+      endTime: draft.endTime || ''
+    });
+
     // Populate form from draft values.
     this.form = { concernTypeId: draft.concernTypeId, date: draft.date, notes: draft.notes };
     this.minDate = this.guidance.today();
@@ -354,6 +365,42 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
           this.draftError = (e && e.message) ? e.message : 'Could not submit the draft. Please try again.';
         }
       );
+    });
+  }
+
+  /** Close the Edit Draft dialog without saving; confirm first if the student changed anything. */
+  cancelDraftEdit() {
+    if (this.saving || this.draftSaving || !this.activeDraft) { return; }
+
+    const currentValues = JSON.stringify({
+      concernTypeId: this.form.concernTypeId || '',
+      date: this.form.date || '',
+      notes: this.form.notes || '',
+      startTime: (this.selected && this.selected.startTime) || this.activeDraft.startTime || '',
+      endTime: (this.selected && this.selected.endTime) || this.activeDraft.endTime || ''
+    });
+    const hasChanges = currentValues !== this.draftEditSnapshot;
+
+    const closeDialog = () => {
+      this.activeDraft = null;
+      this.draftEditSnapshot = '';
+      if (this.dialogRef) { this.dialogRef.close(); }
+    };
+
+    if (!hasChanges) {
+      closeDialog();
+      return;
+    }
+
+    Swal({
+      title: 'Discard unsaved changes?',
+      text: 'Your changes to this draft will not be saved.',
+      type: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Discard Changes',
+      cancelButtonText: 'Continue Editing'
+    }).then(result => {
+      if (result.value) { closeDialog(); }
     });
   }
 
