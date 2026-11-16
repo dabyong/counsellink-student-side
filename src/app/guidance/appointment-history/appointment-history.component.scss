@@ -172,6 +172,19 @@ $shadow: 0 1px 3px rgba(0, 0, 0, .15);
   display: block; font-size: 10px; color: $muted; margin-top: 3px; font-style: italic;
 }
 
+// Shared hover treatment for every icon-only appointment action (edit, repeat, cancel).
+.btn-icon {
+  transition: background-color .18s ease, color .18s ease, border-color .18s ease;
+
+  &:hover:not([disabled]), &:focus-visible:not([disabled]) {
+    background-color: $navy !important;
+    border-color: $navy !important;
+    color: #fff !important;
+
+    .mat-icon { color: #fff !important; }
+  }
+}
+
 // Smaller action buttons inside the table
 .btn-sm { font-size: 12px !important; padding: 0 10px !important; height: 28px !important; line-height: 26px !important; min-width: 0 !important; }
 
