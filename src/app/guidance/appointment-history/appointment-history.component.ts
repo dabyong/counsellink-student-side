@@ -503,7 +503,10 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
 
   /** Confirm an 'Approved' (counselor-proposed) appointment: PUT /api/appointments/{id}/student-confirm. */
   confirmAppointment(a: Appointment) {
-    if (this.actionLoading || this.confirmedIds.has(a.id)) { return; }
+    // Only counselor-initiated appointments approved by the counselor require student confirmation.
+    // Student-initiated appointments become confirmed as soon as the counselor approves them.
+    if (this.actionLoading || this.confirmedIds.has(a.id) ||
+        !this.isCounselorInitiated(a) || a.status !== 'Approved') { return; }
     this.actionLoading = true;
     this.actionError = '';
     this.notice = '';
