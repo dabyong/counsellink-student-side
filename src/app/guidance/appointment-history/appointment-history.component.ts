@@ -595,7 +595,10 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
     if (this.mode === 'book') {
       return !!this.selected && !!this.form.date && !!this.form.concernTypeId && !!this.form.notes.trim() && !this.saving;
     }
-    return !!this.selected && !!this.form.date && !!this.form.concernTypeId && !!this.form.notes.trim() && !this.saving;
+    if (this.editingConcernDetails) {
+      return !!this.selected && !!this.form.date && !!this.form.concernTypeId && !!this.form.notes.trim() && !this.saving;
+    }
+    return !!this.selected && !!this.form.date && !this.saving;
   }
 
   submit() {
