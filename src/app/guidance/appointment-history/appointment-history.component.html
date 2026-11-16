@@ -234,6 +234,7 @@
 
   <!-- Draft editing mode: Submit Draft + Cancel Draft + Save -->
   <mat-dialog-actions class="dlg-actions" *ngIf="isDraftMode">
+    <button mat-button type="button" (click)="cancelDraftEdit()" [disabled]="saving || draftSaving">Cancel</button>
     <button mat-stroked-button type="button" class="btn-outline" (click)="saveDraft(formDialog)"
       [disabled]="saving || draftSaving">
       {{ draftSaving ? 'Saving...' : 'Save Draft' }}
