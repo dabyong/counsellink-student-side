@@ -88,11 +88,9 @@
                   <ng-container *ngIf="a.status === 'Pending'">
                     <!-- Counselor-initiated: student can accept the proposed appointment. -->
                     <ng-container *ngIf="isCounselorInitiated(a)">
-                      <button mat-raised-button type="button" class="btn-primary btn-sm"
+                      <button mat-stroked-button type="button" class="btn-outline btn-sm btn-icon"
                         [disabled]="actionLoading" matTooltip="Accept counselor-initiated appointment"
-                        (click)="confirmCounselorInitiated(a)">
-                        <mat-icon>check</mat-icon> Accept Appointment
-                      </button>
+                        (click)="confirmCounselorInitiated(a)"><mat-icon>check</mat-icon></button>
                     </ng-container>
                     <!-- Student-initiated: student can withdraw the pending request. -->
                     <ng-container *ngIf="!isCounselorInitiated(a)">
