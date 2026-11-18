@@ -187,7 +187,7 @@
       <input matInput [matDatepicker]="datePicker" [(ngModel)]="datePickerValue"
         [min]="minDateDate" [readonly]="mode === 'reschedule' && editingConcernDetails"
         (dateChange)="onMaterialDateChange($event.value)">
-      <mat-datepicker-toggle matSuffix [for]="datePicker"></mat-datepicker-toggle>
+      <mat-datepicker-toggle matSuffix [for]="datePicker" [disabled]="mode === 'reschedule' && editingConcernDetails"></mat-datepicker-toggle>
       <mat-datepicker #datePicker panelClass="appointment-date-picker"></mat-datepicker>
     </mat-form-field>
 
