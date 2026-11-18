@@ -99,8 +99,8 @@
                       (click)="confirmAppointment(a)" matTooltip="Confirm appointment"><mat-icon>check</mat-icon></button>
                   </ng-container>
                   <ng-container *ngIf="a.status === 'Approved' && !isCounselorInitiated(a)">
-                    <!-- Student-initiated + counselor-approved is already mutually confirmed. -->
-                    <span class="waiting-label">Confirmed by counselor</span>
+                    <!-- Student-initiated + counselor-approved is already mutually confirmed; no further student action is required. -->
+                    <span class="waiting-label">Appointment Confirmed</span>
                   </ng-container>
                   <ng-container *ngIf="a.status === 'Rescheduled'">
                     <span class="waiting-label">Reschedule awaiting confirmation</span>
