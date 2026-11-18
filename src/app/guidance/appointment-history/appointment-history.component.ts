@@ -621,6 +621,22 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
     this.formError = '';
   }
 
+  /** Open the native date picker when any part of the Date field is clicked. */
+  openDatePicker(input: HTMLInputElement) {
+    if (this.mode === 'reschedule' && this.editingConcernDetails) { return; }
+    const picker = input as any;
+    if (typeof picker.showPicker === 'function') {
+      try {
+        picker.showPicker();
+      } catch (_) {
+        input.focus();
+      }
+    } else {
+      input.focus();
+      input.click();
+    }
+  }
+
   onDateChange() {
     this.selected = null;
     this.slots = [];
