@@ -44,6 +44,7 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
   target: Appointment = null;
   form = { concernTypeId: '', date: '', notes: '' };
   minDate = '';
+  datePickerValue: Date = null;
   slots: TimeSlot[] = [];
   slotsLoading = false;
   selected: TimeSlot = null;
@@ -194,6 +195,7 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
       this.form.concernTypeId = a.concernTypeId || (this.concernTypes.find(t => t.name === a.concernTypeName) || { id: '' }).id;
       this.form.notes = a.notes || '';
       this.form.date = a.date;
+      this.datePickerValue = this.parseDateInput(a.date);
       this.onDateChange();
     }
     this.openDialog(tpl);
@@ -280,6 +282,7 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
 
     // Populate form from draft values.
     this.form = { concernTypeId: draft.concernTypeId, date: draft.date, notes: draft.notes };
+    this.datePickerValue = this.parseDateInput(draft.date);
     this.minDate = this.guidance.today();
     this.slots = [];
     this.selected = null;
@@ -615,26 +618,37 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
 
   private resetForm() {
     this.form = { concernTypeId: '', date: '', notes: '' };
+    this.datePickerValue = null;
     this.minDate = this.guidance.today();
     this.slots = [];
     this.selected = null;
     this.formError = '';
   }
 
-  /** Open the native date picker when any part of the Date field is clicked. */
-  openDatePicker(input: HTMLInputElement) {
-    if (this.mode === 'reschedule' && this.editingConcernDetails) { return; }
-    const picker = input as any;
-    if (typeof picker.showPicker === 'function') {
-      try {
-        picker.showPicker();
-      } catch (_) {
-        input.focus();
-      }
-    } else {
-      input.focus();
-      input.click();
+  /** Convert the API's yyyy-MM-dd value into a local Date without timezone shifting. */
+  private parseDateInput(value: string): Date {
+    if (!value) { return null; }
+    const parts = value.split('-').map(Number);
+    if (parts.length !== 3 || !parts[0] || !parts[1] || !parts[2]) { return null; }
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+  }
+
+  get minDateDate(): Date {
+    return this.parseDateInput(this.minDate);
+  }
+
+  /** Keep the existing API/draft date format while using Angular Material's calendar UI. */
+  onMaterialDateChange(value: Date) {
+    if (!value) {
+      this.form.date = '';
+      this.onDateChange();
+      return;
     }
+    const year = value.getFullYear();
+    const month = ('0' + (value.getMonth() + 1)).slice(-2);
+    const day = ('0' + value.getDate()).slice(-2);
+    this.form.date = year + '-' + month + '-' + day;
+    this.onDateChange();
   }
 
   onDateChange() {
