@@ -182,9 +182,13 @@
     </mat-form-field>
     <p class="who" *ngIf="mode === 'reschedule' && target">Appointment type: <strong>{{ target?.counselingTypeName }}</strong></p>
 
-    <mat-form-field appearance="fill" class="full date-picker-field" (click)="openDatePicker(dateInput)">
+    <mat-form-field appearance="fill" class="full date-picker-field" (click)="datePicker.open()">
       <mat-label>Date</mat-label>
-      <input #dateInput matInput type="date" [(ngModel)]="form.date" [min]="minDate" [readonly]="mode === 'reschedule' && editingConcernDetails" (click)="$event.stopPropagation()" (ngModelChange)="onDateChange()">
+      <input matInput [matDatepicker]="datePicker" [(ngModel)]="datePickerValue"
+        [min]="minDateDate" [readonly]="mode === 'reschedule' && editingConcernDetails"
+        (dateChange)="onMaterialDateChange($event.value)">
+      <mat-datepicker-toggle matSuffix [for]="datePicker"></mat-datepicker-toggle>
+      <mat-datepicker #datePicker panelClass="appointment-date-picker"></mat-datepicker>
     </mat-form-field>
 
     <!-- Draft: show saved time hint when slots haven't loaded yet -->
