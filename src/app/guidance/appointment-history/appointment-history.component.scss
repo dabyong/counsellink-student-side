@@ -87,24 +87,50 @@ $shadow: 0 1px 3px rgba(0, 0, 0, .15);
 .who { margin: 0 0 12px; color: $muted; strong { color: $ink; } }
 .full { width: 100%; }
 
-// Make the whole Date field an obvious, comfortable click/tap target.
+// Keep the Material date field compact and aligned with the portal's controls.
 .dlg-body .date-picker-field {
   cursor: pointer;
 
-  input[type="date"] {
+  input[matDatepicker] {
     min-height: 48px;
     box-sizing: border-box;
     cursor: pointer;
+  }
 
-    &::-webkit-calendar-picker-indicator {
-      width: 22px;
-      height: 22px;
-      padding: 3px;
-      margin-right: 2px;
-      cursor: pointer;
-      transform: none;
-      transform-origin: center;
-    }
+  ::ng-deep .mat-datepicker-toggle .mat-icon-button {
+    width: 36px;
+    height: 36px;
+    line-height: 36px;
+  }
+
+  ::ng-deep .mat-datepicker-toggle-default-icon {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+// The datepicker panel is rendered in the CDK overlay, outside this component host.
+::ng-deep .appointment-date-picker {
+  .mat-calendar-body-cell-content {
+    border-radius: 50%;
+    transition: background-color .15s ease, color .15s ease;
+  }
+
+  .mat-calendar-body-selected {
+    background-color: $navy !important;
+    color: #fff !important;
+    border-radius: 50%;
+  }
+
+  .mat-calendar-body-cell:not(.mat-calendar-body-disabled):hover
+  .mat-calendar-body-cell-content:not(.mat-calendar-body-selected) {
+    background-color: $tint !important;
+    color: $navy !important;
+    border-radius: 50%;
+  }
+
+  .mat-calendar-body-today:not(.mat-calendar-body-selected) {
+    border-color: $blue;
   }
 }
 
