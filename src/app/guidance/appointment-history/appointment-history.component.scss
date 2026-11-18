@@ -87,6 +87,20 @@ $shadow: 0 1px 3px rgba(0, 0, 0, .15);
 .who { margin: 0 0 12px; color: $muted; strong { color: $ink; } }
 .full { width: 100%; }
 
+// Make the native calendar control in the New Appointment date field easier to tap.
+.dlg-body input[type="date"] {
+  min-height: 48px;
+  box-sizing: border-box;
+
+  &::-webkit-calendar-picker-indicator {
+    width: 24px;
+    height: 24px;
+    padding: 8px;
+    margin-right: 2px;
+    cursor: pointer;
+  }
+}
+
 .slot-block { margin-bottom: 14px; }
 .slot-title { display: block; font-size: 12px; font-weight: 600; color: $navy; margin-bottom: 6px; }
 .slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
