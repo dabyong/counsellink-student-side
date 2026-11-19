@@ -175,7 +175,7 @@
   <mat-dialog-content class="dlg-body">
     <p class="who" *ngIf="counselor">Counselor: <strong>{{ counselor?.name }}</strong></p>
 
-    <mat-form-field appearance="fill" class="full" *ngIf="mode === 'book' || (mode === 'reschedule' && editingConcernDetails)">
+    <mat-form-field appearance="outline" class="full" *ngIf="mode === 'book' || (mode === 'reschedule' && editingConcernDetails)">
       <mat-label>Concern type</mat-label>
       <mat-select [(ngModel)]="form.concernTypeId">
         <mat-option *ngFor="let t of concernTypes" [value]="t.id">{{ t.name }}</mat-option>
@@ -183,7 +183,7 @@
     </mat-form-field>
     <p class="who" *ngIf="mode === 'reschedule' && target">Appointment type: <strong>{{ target?.counselingTypeName }}</strong></p>
 
-    <mat-form-field appearance="fill" class="full date-picker-field" (click)="datePicker.open()">
+    <mat-form-field appearance="outline" class="full date-picker-field" (click)="datePicker.open()">
       <mat-label>Date</mat-label>
       <input matInput [matDatepicker]="datePicker" [(ngModel)]="datePickerValue"
         [min]="minDateDate" [readonly]="mode === 'reschedule' && editingConcernDetails"
@@ -210,7 +210,7 @@
       <p class="empty" *ngIf="!slotsLoading && !slots.length && form.date">No slots available on this date.</p>
     </div>
 
-    <mat-form-field appearance="fill" class="full" *ngIf="mode === 'book' || (mode === 'reschedule' && editingConcernDetails)">
+    <mat-form-field appearance="outline" class="full" *ngIf="mode === 'book' || (mode === 'reschedule' && editingConcernDetails)">
       <mat-label>Reason for appointment</mat-label>
       <textarea matInput [(ngModel)]="form.notes" rows="3" placeholder="Describe the reason for your appointment"></textarea>
     </mat-form-field>
