@@ -429,7 +429,7 @@ export class CounselLinkApi {
 
   private isPendingFollowUpRequest(row: any): boolean {
     const s = norm(firstDefined(row, ['status', 'requestStatus', 'rescheduleRequestStatus', 'approvalStatus']));
-    return !s || s.indexOf('pend') >= 0 || s.indexOf('await') >= 0 || s.indexOf('request') >= 0;
+    return s.indexOf('pend') >= 0 || s.indexOf('await') >= 0 || s.indexOf('request') >= 0;
   }
 
   private followUpIdOf(row: any): number {
