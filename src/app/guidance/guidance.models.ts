@@ -4,12 +4,12 @@
 // 'Approved' is added to represent counselor-approved appointments (counselor has approved/confirmed it).
 // labelFor() in counsellink.api.ts maps API status names containing 'approv' or 'confirm'
 // (but NOT 'schedul' or 'pend') to 'Approved'.
-export type AppointmentStatus = 'Pending' | 'Approved' | 'Completed' | 'Rescheduled' | 'No-show' | 'Draft';
+export type AppointmentStatus = 'Pending' | 'Approved' | 'Scheduled' | 'Reschedule Pending' | 'Completed' | 'Rescheduled' | 'Cancelled' | 'No-show' | 'Draft';
 
 // 'Own' is added to represent a slot already taken by the authenticated student themselves.
 export type SlotStatus = 'Available' | 'Unavailable' | 'Own';
 
-export const APPOINTMENT_STATUSES: AppointmentStatus[] = ['Pending', 'Approved', 'Completed', 'Rescheduled', 'No-show'];
+export const APPOINTMENT_STATUSES: AppointmentStatus[] = ['Pending', 'Approved', 'Scheduled', 'Reschedule Pending', 'Completed', 'Rescheduled', 'Cancelled', 'No-show'];
 
 // Counselor office hours (from the counselor "My schedule" screen).
 // 12:30 PM - 1:00 PM is the lunch break, so it is never offered as a slot.
@@ -68,6 +68,10 @@ export interface Appointment {
   status: AppointmentStatus;
   schoolYear: string;
   notes: string;
+  /** Follow-up appointments are distinct from normal appointments and must use follow-up APIs. */
+  isFollowUp?: boolean;
+  followUpId?: number;
+  followUpReschedulePending?: boolean;
 }
 
 export interface BookingRequest {
