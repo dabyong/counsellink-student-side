@@ -181,6 +181,13 @@ export class GuidanceService {
     });
   }
 
+  /** Student follow-up reschedule: creates a request requiring counselor approval. */
+  requestFollowUpReschedule(id: number, req: RescheduleRequest, note: string): Observable<any> {
+    return this.getStudentProfile().pipe(
+      switchMap(p => this.api.requestFollowUpReschedule(p, id, req.date, req.startTime, req.endTime, note))
+    );
+  }
+
   /** Update concern type and reason while preserving the appointment's current status. */
   updateConcernDetails(id: number, concernTypeId: string, concernDescription: string): Observable<Appointment> {
     return this.api.updateConcernDetails(id, concernTypeId, concernDescription);
