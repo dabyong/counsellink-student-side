@@ -85,7 +85,7 @@
               </td>
               <td class="col-actions" data-label="Actions">
                 <div class="row-actions">
-                  <ng-container *ngIf="isFollowUp(a) && a.status === 'Scheduled' && !a.followUpReschedulePending">
+                  <ng-container *ngIf="isFollowUp(a) && (a.status === 'Scheduled' || a.status === 'Pending' || a.status === 'Approved') && !a.followUpReschedulePending">
                     <button mat-stroked-button type="button" class="btn-outline btn-sm btn-icon"
                       [disabled]="actionLoading" matTooltip="Request follow-up reschedule"
                       (click)="openReschedule(a, formDialog)"><mat-icon>event_repeat</mat-icon></button>
