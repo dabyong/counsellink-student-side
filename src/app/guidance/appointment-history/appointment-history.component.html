@@ -76,16 +76,24 @@
               <td class="col-date" data-label="Date">{{ a.date | date:'MMM d, y' }}</td>
               <td class="col-time" data-label="Time">{{ time(a) }}</td>
               <td class="col-type" data-label="Type">
-                <span class="type-badge">{{ a.counselingTypeName || '—' }}</span>
+                <span class="type-badge">{{ isFollowUp(a) ? 'Follow Up' : (a.counselingTypeName || '—') }}</span>
               </td>
               <td class="col-concern" data-label="Concern">{{ a.concernTypeName || '—' }}</td>
               <td class="col-notes" data-label="Reason">{{ a.notes || '—' }}</td>
               <td class="col-status" data-label="Status">
-                <span class="badge" [ngClass]="statusClass(a)">{{ a.status }}</span>
+                <span class="badge" [ngClass]="statusClass(a)">{{ displayStatus(a) }}</span>
               </td>
               <td class="col-actions" data-label="Actions">
                 <div class="row-actions">
-                  <ng-container *ngIf="a.status === 'Pending'">
+                  <ng-container *ngIf="isFollowUp(a) && a.status === 'Scheduled' && !a.followUpReschedulePending">
+                    <button mat-stroked-button type="button" class="btn-outline btn-sm btn-icon"
+                      [disabled]="actionLoading" matTooltip="Request follow-up reschedule"
+                      (click)="openReschedule(a, formDialog)"><mat-icon>event_repeat</mat-icon></button>
+                  </ng-container>
+                  <ng-container *ngIf="isFollowUp(a) && a.status === 'Reschedule Pending'">
+                    <span class="waiting-label">Waiting for counselor</span>
+                  </ng-container>
+                  <ng-container *ngIf="!isFollowUp(a) && a.status === 'Pending'">
                     <!-- Counselor-initiated: student can accept the proposed appointment. -->
                     <ng-container *ngIf="isCounselorInitiated(a)">
                       <button mat-stroked-button type="button" class="btn-outline btn-sm btn-icon"
@@ -99,11 +107,11 @@
                         (click)="requestDelete(a)"><mat-icon>cancel</mat-icon></button>
                     </ng-container>
                   </ng-container>
-                  <ng-container *ngIf="a.status === 'Approved'">
+                  <ng-container *ngIf="!isFollowUp(a) && a.status === 'Approved'">
                     <!-- Approved appointments are confirmed for both initiation types; no further action is needed. -->
                     <span class="waiting-label">Appointment Confirmed</span>
                   </ng-container>
-                  <ng-container *ngIf="a.status === 'Rescheduled'">
+                  <ng-container *ngIf="!isFollowUp(a) && a.status === 'Rescheduled'">
                     <span class="waiting-label">Reschedule awaiting confirmation</span>
                   </ng-container>
                 </div>
@@ -170,10 +178,11 @@
   <h2 mat-dialog-title>
     <ng-container *ngIf="isDraftMode">Edit Draft</ng-container>
     <ng-container *ngIf="!isDraftMode && mode === 'book'">New Appointment</ng-container>
-    <ng-container *ngIf="!isDraftMode && mode === 'reschedule'">{{ editingConcernDetails ? 'Edit Appointment' : 'Reschedule Appointment' }}</ng-container>
+    <ng-container *ngIf="!isDraftMode && mode === 'reschedule'">{{ isFollowUp(target) ? 'Reschedule Follow Up' : (editingConcernDetails ? 'Edit Appointment' : 'Reschedule Appointment') }}</ng-container>
   </h2>
   <mat-dialog-content class="dlg-body">
-    <p class="who" *ngIf="counselor">Counselor: <strong>{{ counselor?.name }}</strong></p>
+    <p class="who" *ngIf="target?.isFollowUp">Counselor: <strong>{{ target?.counselorName }}</strong></p>
+  <p class="who" *ngIf="!target?.isFollowUp && counselor">Counselor: <strong>{{ counselor?.name }}</strong></p>
 
     <mat-form-field appearance="outline" class="full" *ngIf="mode === 'book' || (mode === 'reschedule' && editingConcernDetails)">
       <mat-label>Concern type</mat-label>
@@ -181,7 +190,11 @@
         <mat-option *ngFor="let t of concernTypes" [value]="t.id">{{ t.name }}</mat-option>
       </mat-select>
     </mat-form-field>
-    <p class="who" *ngIf="mode === 'reschedule' && target">Appointment type: <strong>{{ target?.counselingTypeName }}</strong></p>
+    <p class="who" *ngIf="mode === 'reschedule' && target && !target?.isFollowUp">Appointment type: <strong>{{ target?.counselingTypeName }}</strong></p>
+    <mat-form-field appearance="outline" class="full" *ngIf="mode === 'reschedule' && target?.isFollowUp">
+      <mat-label>Reason for reschedule (optional)</mat-label>
+      <textarea matInput [(ngModel)]="followUpRescheduleNote" rows="2" placeholder="Add a note for your counselor"></textarea>
+    </mat-form-field>
 
     <mat-form-field appearance="outline" class="full date-picker-field" (click)="datePicker.open()">
       <mat-label>Date</mat-label>
@@ -236,7 +249,7 @@
     <button mat-button type="button" (click)="closeForm()" [disabled]="saving" matTooltip="Close without saving">Cancel</button>
     <button mat-raised-button type="button" class="btn-primary" (click)="submit()" [disabled]="!canSubmit" matTooltip="Submit appointment changes">
       <ng-container *ngIf="editingConcernDetails"><mat-icon>check</mat-icon> {{ saving ? 'Submitting...' : 'Submit Changes' }}</ng-container>
-      <ng-container *ngIf="!editingConcernDetails">{{ saving ? 'Saving...' : 'Reschedule' }}</ng-container>
+      <ng-container *ngIf="!editingConcernDetails">{{ saving ? 'Submitting...' : (isFollowUp(target) ? 'Request Reschedule' : 'Reschedule') }}</ng-container>
     </button>
   </mat-dialog-actions>
 
