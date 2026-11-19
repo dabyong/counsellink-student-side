@@ -54,6 +54,7 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
   actionError = '';
   notice = '';
   confirmTarget: Appointment = null;
+  followUpRescheduleNote = '';
 
   // ---- IDs of appointments confirmed by the student this session (backend keeps status 'Confirmed'
   //       which maps to 'Approved' in labelFor; track confirmed IDs to suppress the Confirm button).
@@ -170,6 +171,10 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
 
   statusClass(a: Appointment): string { return 'st-' + a.status.toLowerCase().replace(/-/g, ''); }
 
+  isFollowUp(a: Appointment): boolean { return !!(a && a.isFollowUp); }
+
+  displayStatus(a: Appointment): string { return a && a.isFollowUp && a.status === 'Reschedule Pending' ? 'Reschedule Pending' : a.status; }
+
   /** True only for appointments created by the counselor. */
   isCounselorInitiated(a: Appointment): boolean {
     return (a.counselingTypeName || '').trim().toLowerCase() === 'counselor initiated';
@@ -190,7 +195,8 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
     this.activeDraft = null;   // ensure normal reschedule mode
     this.mode = 'reschedule';
     this.resetForm();
-    this.editingConcernDetails = !this.isCounselorInitiated(a);
+    this.editingConcernDetails = !this.isCounselorInitiated(a) && !this.isFollowUp(a);
+    this.followUpRescheduleNote = '';
     if (this.editingConcernDetails) {
       this.form.concernTypeId = a.concernTypeId || (this.concernTypes.find(t => t.name === a.concernTypeName) || { id: '' }).id;
       this.form.notes = a.notes || '';
@@ -623,7 +629,9 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
     this.slots = [];
     this.selected = null;
     this.formError = '';
+    this.followUpRescheduleNote = '';
   }
+
 
   /** Convert the API's yyyy-MM-dd value into a local Date without timezone shifting. */
   private parseDateInput(value: string): Date {
@@ -658,12 +666,13 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
     if (!this.form.date) { return; }
     if (this.form.date < this.minDate) { this.formError = 'Please choose today or a later date.'; return; }
     if (this.guidance.isWeekend(this.form.date)) { this.formError = 'Appointments are not available on weekends.'; return; }
-    if (!this.counselor) {
+    const availabilityCounselorId = (this.isFollowUp(this.target) && this.target.counselorId) ? this.target.counselorId : (this.counselor && this.counselor.id);
+    if (!availabilityCounselorId) {
       this.formError = this.counselorError || 'Counselor info is not available yet. Please close and try again.';
       return;
     }
     this.slotsLoading = true;
-    this.guidance.getSlots(this.counselor.id, this.form.date).subscribe(
+    this.guidance.getSlots(availabilityCounselorId, this.form.date).subscribe(
       s => { this.slots = s; this.slotsLoading = false; },
       e => { this.formError = (e && e.message) ? e.message : 'Could not load time slots.'; this.slotsLoading = false; }
     );
@@ -725,6 +734,21 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
         startTime: s.startTime,
         endTime: s.endTime
       };
+      if (this.isFollowUp(this.target)) {
+        this.guidance.requestFollowUpReschedule(this.target.followUpId || this.target.id, req, this.followUpRescheduleNote.trim()).subscribe(
+          () => {
+            this.saving = false;
+            if (this.dialogRef) { this.dialogRef.close(); }
+            this.notice = 'Follow-up reschedule request sent. Waiting for counselor approval.';
+            this.load();
+          },
+          e => {
+            this.saving = false;
+            this.formError = (e && e.message) ? e.message : 'Could not send the follow-up reschedule request. Please try again.';
+          }
+        );
+        return;
+      }
       const appointmentId = this.target.id;
       const submitReschedule = () => this.guidance.reschedule(appointmentId, req).subscribe(
         (updated: Appointment) => {
