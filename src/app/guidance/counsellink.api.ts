@@ -386,9 +386,67 @@ export class CounselLinkApi {
       .pipe(map(r => rows(r[0]).map(row => this.toAppointment(row, r[1]))));
   }
 
-  /** ASSUMPTION: the endpoint has no paging, search or label filter, so all of one student's rows are fetched and cut here. */
+  /** Reads counselor-created follow-ups for the student using the live Swagger route. */
+  private studentFollowUps(p: StudentProfile): Observable<any[]> {
+    return this.get('follow-ups/student', { idNumber: p.idNumber, view: 'Active' }).pipe(map(body => rows(body)));
+  }
+
+  /** Reads student reschedule requests so pending state persists after refresh. */
+  private studentFollowUpRescheduleRequests(p: StudentProfile): Observable<any[]> {
+    return this.get('follow-ups/reschedule-requests/student', { idNumber: p.idNumber }).pipe(map(body => rows(body)));
+  }
+
+  private mapFollowUp(row: any, pendingRequest: boolean, studentId: string): Appointment {
+    const id = +firstDefined(row, ['followUpID', 'followUpId', 'id']);
+    const startAt = firstDefined(row, ['scheduledStartAt', 'startAt', 'appointmentStartAt', 'appointmentDate', 'targetDate', 'startDate']);
+    const endAt = firstDefined(row, ['scheduledEndAt', 'endAt', 'appointmentEndAt', 'endDate']);
+    const rawStatus = norm(firstDefined(row, ['followUpStatus', 'status', 'statusName', 'followUpStatusName']));
+    let status: AppointmentStatus = 'Scheduled';
+    if (pendingRequest || rawStatus.indexOf('reschedule request') >= 0 || rawStatus.indexOf('reschedulepending') >= 0) status = 'Reschedule Pending';
+    else if (rawStatus.indexOf('cancel') >= 0) status = 'Cancelled';
+    else if (rawStatus.indexOf('complet') >= 0 || rawStatus.indexOf('done') >= 0) status = 'Completed';
+    else if (rawStatus.indexOf('noshow') >= 0 || rawStatus.indexOf('no show') >= 0) status = 'No-show';
+    else if (rawStatus.indexOf('pend') >= 0 || rawStatus.indexOf('request') >= 0) status = 'Pending';
+    else if (rawStatus.indexOf('approv') >= 0 || rawStatus.indexOf('confirm') >= 0) status = 'Scheduled';
+    const date = toYmd(String(startAt || '')) || toYmd(firstDefined(row, ['targetDate', 'appointmentDate', 'date']));
+    const startTime = toHm(startAt) || toHm(firstDefined(row, ['startTime', 'appointmentTime']));
+    const endTime = toHm(endAt) || toHm(firstDefined(row, ['endTime', 'appointmentEndTime'])) || endFor(startTime);
+    const counselorId = String(firstDefined(row, ['employeeID', 'employeeId', 'counselorID', 'counselorId']) || '');
+    return {
+      id: isNaN(id) ? 0 : id, followUpId: isNaN(id) ? 0 : id, isFollowUp: true,
+      followUpReschedulePending: pendingRequest,
+      studentId: String(firstDefined(row, ['idNumber', 'studentID', 'studentId']) || studentId || ''),
+      counselorId,
+      counselorName: String(firstDefined(row, ['counselorName', 'employeeName', 'assignedCounselorName']) || 'Guidance Counselor'),
+      counselingTypeId: '', counselingTypeName: 'Follow Up',
+      concernTypeId: String(firstDefined(row, ['concernTypeID', 'concernTypeId']) || ''),
+      concernTypeName: String(firstDefined(row, ['concernTypeName', 'concernType', 'concernName']) || ''),
+      date, startTime, endTime, status,
+      schoolYear: String((this.global as any).syear || this.global.constSY || this.global.sy || ''),
+      notes: String(firstDefined(row, ['actionRequired', 'concernDescription', 'notes', 'reason']) || '')
+    };
+  }
+
+  private isPendingFollowUpRequest(row: any): boolean {
+    const s = norm(firstDefined(row, ['status', 'requestStatus', 'rescheduleRequestStatus', 'approvalStatus']));
+    return !s || s.indexOf('pend') >= 0 || s.indexOf('await') >= 0 || s.indexOf('request') >= 0;
+  }
+
+  private followUpIdOf(row: any): number {
+    const value = firstDefined(row, ['followUpID', 'followUpId', 'followUpIDNumber']);
+    return value === undefined || value === null ? NaN : +value;
+  }
+
+  /** Fetch normal appointments and counselor-created follow-ups, merge, filter, sort, and paginate. */
   getHistory(p: StudentProfile, q: HistoryQuery): Observable<HistoryResult> {
-    return this.studentAppointments(p).pipe(map(all => {
+    return forkJoin(this.studentAppointments(p), this.studentFollowUps(p), this.studentFollowUpRescheduleRequests(p)).pipe(map(r => {
+      const requests = r[2].filter(x => this.isPendingFollowUpRequest(x));
+      const followUps = r[1].map(row => {
+        const id = +firstDefined(row, ['followUpID', 'followUpId', 'id']);
+        const pending = requests.some(req => this.followUpIdOf(req) === id);
+        return this.mapFollowUp(row, pending, p.idNumber);
+      });
+      const all = r[0].concat(followUps);
       const term = (q.search || '').trim().toLowerCase();
       const items = all
         .filter(a => a.status !== 'Draft')   // Draft records (status 5) are managed separately
@@ -399,6 +457,16 @@ export class CounselLinkApi {
       const from = q.pageIndex * q.pageSize;
       return { items: items.slice(from, from + q.pageSize), total: items.length };
     }));
+  }
+
+  /** POST /api/follow-ups/{followUpId}/reschedule-requests — requests counselor approval. */
+  requestFollowUpReschedule(p: StudentProfile, followUpId: number, date: string, startTime: string, endTime: string, note: string): Observable<any> {
+    return this.send('post', 'follow-ups/' + followUpId + '/reschedule-requests', {
+      idNumber: p.idNumber,
+      requestedStartAt: date + 'T' + startTime + ':00',
+      requestedEndAt: date + 'T' + endTime + ':00',
+      requestNote: note || null
+    });
   }
 
   /** Uses the exact Pending/Approved rule enforced by normal booking, for draft-submit prechecks too. */
