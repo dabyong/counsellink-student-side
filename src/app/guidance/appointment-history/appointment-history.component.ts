@@ -276,6 +276,20 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
     this.openDialog(tpl, '900px');
   }
 
+  /** Close draft details and return directly to the saved-drafts list. */
+  backToDrafts(tpl: TemplateRef<any>) {
+    const ref = this.dialogRef;
+    if (ref) {
+      ref.afterClosed().subscribe(() => {
+        this.dialogRef = null;
+        this.openDraftsList(tpl);
+      });
+      ref.close();
+    } else {
+      this.openDraftsList(tpl);
+    }
+  }
+
   /** Close the list first, then show one draft's read-only details. */
   viewDraft(draft: AppointmentDraft, detailsTpl: TemplateRef<any>) {
     const ref = this.dialogRef;
