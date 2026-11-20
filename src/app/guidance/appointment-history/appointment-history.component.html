@@ -255,8 +255,8 @@
             <td data-label="Time">{{ draftTime(d) }}</td>
             <td data-label="Status"><span class="badge draft-badge">Draft</span></td>
             <td data-label="Actions"><div class="row-actions">
-              <button mat-stroked-button type="button" class="btn-outline btn-sm" (click)="viewDraft(d, draftsListDialog, draftDetailsDialog)">View</button>
-              <button mat-stroked-button type="button" class="btn-outline btn-sm btn-icon" matTooltip="Edit draft" (click)="editDraftFromList(d, draftsListDialog, formDialog)"><mat-icon>edit</mat-icon></button>
+              <button mat-stroked-button type="button" class="btn-outline btn-sm" (click)="viewDraft(d, draftDetailsDialog)">View</button>
+              <button mat-stroked-button type="button" class="btn-outline btn-sm btn-icon" matTooltip="Edit draft" (click)="editDraftFromList(d, formDialog)"><mat-icon>edit</mat-icon></button>
               <button mat-stroked-button type="button" class="btn-outline btn-sm btn-icon btn-warn" matTooltip="Delete draft" (click)="deleteDraftFromList(d)"><mat-icon>delete</mat-icon></button>
             </div></td>
           </tr>
@@ -283,7 +283,7 @@
   </mat-dialog-content>
   <mat-dialog-actions class="dlg-actions">
     <button mat-button type="button" (click)="closeForm()">Close</button>
-    <button mat-raised-button type="button" class="btn-primary" *ngIf="selectedDraft" (click)="editDraftFromDetails(selectedDraft, draftDetailsDialog, formDialog)">Edit Draft</button>
+    <button mat-raised-button type="button" class="btn-primary" *ngIf="selectedDraft" (click)="editDraftFromDetails(selectedDraft, formDialog)">Edit Draft</button>
   </mat-dialog-actions>
 </ng-template>
 
