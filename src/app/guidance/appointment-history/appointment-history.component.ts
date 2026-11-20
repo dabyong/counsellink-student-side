@@ -277,7 +277,7 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
   }
 
   /** Close the list first, then show one draft's read-only details. */
-  viewDraft(draft: AppointmentDraft, listTpl: TemplateRef<any>, detailsTpl: TemplateRef<any>) {
+  viewDraft(draft: AppointmentDraft, detailsTpl: TemplateRef<any>) {
     const ref = this.dialogRef;
     this.selectedDraft = draft;
     if (ref) {
@@ -292,7 +292,7 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
   }
 
   /** Close the drafts list before opening the edit form (avoid stacked dialogs). */
-  editDraftFromList(draft: AppointmentDraft, listTpl: TemplateRef<any>, formTpl: TemplateRef<any>) {
+  editDraftFromList(draft: AppointmentDraft, formTpl: TemplateRef<any>) {
     const ref = this.dialogRef;
     if (ref) {
       ref.afterClosed().subscribe(() => {
@@ -306,7 +306,7 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
   }
 
   /** Close the details dialog before opening the existing draft-edit workflow. */
-  editDraftFromDetails(draft: AppointmentDraft, detailsTpl: TemplateRef<any>, formTpl: TemplateRef<any>) {
+  editDraftFromDetails(draft: AppointmentDraft, formTpl: TemplateRef<any>) {
     const ref = this.dialogRef;
     if (ref) {
       ref.afterClosed().subscribe(() => {
