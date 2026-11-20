@@ -12,6 +12,20 @@
     <mat-progress-bar mode="indeterminate" *ngIf="loading || actionLoading"></mat-progress-bar>
 
     <div class="body">
+      <!-- Quick actions: drafts on the left, appointment creation on the right -->
+      <div class="appointment-actions">
+        <button mat-stroked-button type="button" class="btn-outline drafts-launcher"
+          (click)="openDraftsList(draftsListDialog)" matTooltip="Open saved drafts">
+          <mat-icon>drafts</mat-icon>
+          Saved Drafts
+          <span class="drafts-count">{{ drafts.length }}</span>
+        </button>
+        <button mat-raised-button type="button" class="btn-primary create-appointment"
+          [disabled]="!counselor || !!counselorError"
+          [matTooltip]="counselorError || 'Create appointment'" (click)="openBook(formDialog)">
+          <mat-icon>add</mat-icon> Create Appointment
+        </button>
+      </div>
       <div class="intro">
         <h3>Recent appointments</h3>
         <p>Track upcoming, completed, and rescheduled counseling sessions.</p>
@@ -119,20 +133,7 @@
         <ng-container *ngIf="!search && status === 'All'">You have no appointments yet. Book one with the New Appointment button.</ng-container>
       </div>
 
-      <!-- Quick actions: drafts on the left, appointment creation on the right -->
-      <div class="appointment-actions">
-        <button mat-stroked-button type="button" class="btn-outline drafts-launcher"
-          (click)="openDraftsList(draftsListDialog)" matTooltip="Open saved drafts">
-          <mat-icon>drafts</mat-icon>
-          Saved Drafts
-          <span class="drafts-count">{{ drafts.length }}</span>
-        </button>
-        <button mat-raised-button type="button" class="btn-primary create-appointment"
-          [disabled]="!counselor || !!counselorError"
-          [matTooltip]="counselorError || 'Create appointment'" (click)="openBook(formDialog)">
-          <mat-icon>add</mat-icon> Create Appointment
-        </button>
-      </div>
+
 
       <mat-paginator *ngIf="total > 0" [length]="total" [pageIndex]="pageIndex" [pageSize]="pageSize"
         [pageSizeOptions]="pageSizes" (page)="onPage($event)">
