@@ -65,6 +65,7 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
 
   // ---- Draft state --------------------------------------------------------
   drafts: AppointmentDraft[] = [];
+  selectedDraft: AppointmentDraft | null = null;
   /** The draft currently being edited; null in normal booking mode. */
   activeDraft: AppointmentDraft | null = null;
   draftSaving = false;
@@ -268,6 +269,54 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
         this.draftError = (e && e.message) ? e.message : 'Could not save draft. Please try again.';
       }
     );
+  }
+
+  /** Open the saved-drafts table in its own dialog. */
+  openDraftsList(tpl: TemplateRef<any>) {
+    this.openDialog(tpl);
+  }
+
+  /** Close the list first, then show one draft's read-only details. */
+  viewDraft(draft: AppointmentDraft, listTpl: TemplateRef<any>, detailsTpl: TemplateRef<any>) {
+    const ref = this.dialogRef;
+    this.selectedDraft = draft;
+    if (ref) {
+      ref.afterClosed().subscribe(() => {
+        this.dialogRef = null;
+        this.openDialog(detailsTpl);
+      });
+      ref.close();
+    } else {
+      this.openDialog(detailsTpl);
+    }
+  }
+
+  /** Close the drafts list before opening the edit form (avoid stacked dialogs). */
+  editDraftFromList(draft: AppointmentDraft, listTpl: TemplateRef<any>, formTpl: TemplateRef<any>) {
+    const ref = this.dialogRef;
+    if (ref) {
+      ref.afterClosed().subscribe(() => {
+        this.dialogRef = null;
+        this.openDraft(draft, formTpl);
+      });
+      ref.close();
+    } else {
+      this.openDraft(draft, formTpl);
+    }
+  }
+
+  /** Close the details dialog before opening the existing draft-edit workflow. */
+  editDraftFromDetails(draft: AppointmentDraft, detailsTpl: TemplateRef<any>, formTpl: TemplateRef<any>) {
+    const ref = this.dialogRef;
+    if (ref) {
+      ref.afterClosed().subscribe(() => {
+        this.dialogRef = null;
+        this.openDraft(draft, formTpl);
+      });
+      ref.close();
+    } else {
+      this.openDraft(draft, formTpl);
+    }
   }
 
   /** Open a saved draft into the booking form for editing. */
