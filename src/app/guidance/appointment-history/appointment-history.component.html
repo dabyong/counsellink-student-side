@@ -273,8 +273,8 @@
 <ng-template #draftDetailsDialog>
   <div mat-dialog-title class="draft-details-titlebar">
     <span>Draft Details</span>
-    <button mat-icon-button type="button" aria-label="Close draft details" matTooltip="Close"
-      (click)="closeForm()"><mat-icon>close</mat-icon></button>
+    <button mat-icon-button type="button" aria-label="Back to saved drafts" matTooltip="Back to drafts"
+      (click)="backToDrafts(draftsListDialog)"><mat-icon>close</mat-icon></button>
   </div>
   <mat-dialog-content class="draft-details-content" *ngIf="selectedDraft">
     <dl class="draft-details">
