@@ -273,7 +273,7 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
 
   /** Open the saved-drafts table in its own dialog. */
   openDraftsList(tpl: TemplateRef<any>) {
-    this.openDialog(tpl);
+    this.openDialog(tpl, '900px');
   }
 
   /** Close the list first, then show one draft's read-only details. */
@@ -283,11 +283,11 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
     if (ref) {
       ref.afterClosed().subscribe(() => {
         this.dialogRef = null;
-        this.openDialog(detailsTpl);
+        this.openDialog(detailsTpl, '560px');
       });
       ref.close();
     } else {
-      this.openDialog(detailsTpl);
+      this.openDialog(detailsTpl, '560px');
     }
   }
 
@@ -661,8 +661,8 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
     return true;
   }
 
-  private openDialog(tpl: TemplateRef<any>) {
-    this.dialogRef = this.dialog.open(tpl, { width: '480px', maxWidth: '95vw', disableClose: true });
+  private openDialog(tpl: TemplateRef<any>, width = '480px') {
+    this.dialogRef = this.dialog.open(tpl, { width, maxWidth: '95vw', disableClose: true });
     this.dialogRef.afterClosed().subscribe(() => this.dialogRef = null);
   }
 
