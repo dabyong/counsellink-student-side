@@ -1,15 +1,8 @@
 <div class="hist">
 
-  <!-- Banner on the left; New Appointment button on the right -->
   <div class="top">
     <div class="head">
       <h2>Appointment History</h2>
-    </div>
-    <div class="actions">
-      <button mat-raised-button type="button" class="btn-primary" [disabled]="!counselor || !!counselorError"
-        [matTooltip]="counselorError || 'New appointment'" (click)="openBook(formDialog)">
-        <mat-icon>add</mat-icon> New Appointment
-      </button>
     </div>
   </div>
 
@@ -126,14 +119,19 @@
         <ng-container *ngIf="!search && status === 'All'">You have no appointments yet. Book one with the New Appointment button.</ng-container>
       </div>
 
-      <!-- ---- Drafts section: compact launcher; the full table opens in a dialog ---- -->
-      <div class="drafts-section" *ngIf="drafts.length">
-        <div class="drafts-heading">
-          <span><mat-icon>drafts</mat-icon> Saved Drafts <span class="drafts-count">{{ drafts.length }}</span></span>
-          <button mat-stroked-button type="button" class="btn-outline" (click)="openDraftsList(draftsListDialog)">
-            View drafts
-          </button>
-        </div>
+      <!-- Quick actions: drafts on the left, appointment creation on the right -->
+      <div class="appointment-actions">
+        <button mat-stroked-button type="button" class="btn-outline drafts-launcher"
+          (click)="openDraftsList(draftsListDialog)" matTooltip="Open saved drafts">
+          <mat-icon>drafts</mat-icon>
+          Saved Drafts
+          <span class="drafts-count">{{ drafts.length }}</span>
+        </button>
+        <button mat-raised-button type="button" class="btn-primary create-appointment"
+          [disabled]="!counselor || !!counselorError"
+          [matTooltip]="counselorError || 'Create appointment'" (click)="openBook(formDialog)">
+          <mat-icon>add</mat-icon> Create Appointment
+        </button>
       </div>
 
       <mat-paginator *ngIf="total > 0" [length]="total" [pageIndex]="pageIndex" [pageSize]="pageSize"
@@ -255,7 +253,8 @@
             <td data-label="Time">{{ draftTime(d) }}</td>
             <td data-label="Status"><span class="badge draft-badge">Draft</span></td>
             <td data-label="Actions"><div class="row-actions">
-              <button mat-stroked-button type="button" class="btn-outline btn-sm" (click)="viewDraft(d, draftDetailsDialog)">View</button>
+              <button mat-stroked-button type="button" class="btn-outline btn-sm btn-icon" matTooltip="View draft"
+                (click)="viewDraft(d, draftDetailsDialog)"><mat-icon>search</mat-icon></button>
               <button mat-stroked-button type="button" class="btn-outline btn-sm btn-icon" matTooltip="Edit draft" (click)="editDraftFromList(d, formDialog)"><mat-icon>edit</mat-icon></button>
               <button mat-stroked-button type="button" class="btn-outline btn-sm btn-icon btn-warn" matTooltip="Delete draft" (click)="deleteDraftFromList(d)"><mat-icon>delete</mat-icon></button>
             </div></td>
@@ -271,7 +270,11 @@
 
 <!-- Individual draft details dialog -->
 <ng-template #draftDetailsDialog>
-  <h2 mat-dialog-title>Draft Details</h2>
+  <div mat-dialog-title class="draft-details-titlebar">
+    <span>Draft Details</span>
+    <button mat-icon-button type="button" aria-label="Close draft details" matTooltip="Close"
+      (click)="closeForm()"><mat-icon>close</mat-icon></button>
+  </div>
   <mat-dialog-content class="draft-details-content" *ngIf="selectedDraft">
     <dl class="draft-details">
       <div><dt>Concern</dt><dd>{{ selectedDraft.concernTypeName || '—' }}</dd></div>
@@ -282,7 +285,6 @@
     </dl>
   </mat-dialog-content>
   <mat-dialog-actions class="dlg-actions">
-    <button mat-button type="button" (click)="closeForm()">Close</button>
     <button mat-raised-button type="button" class="btn-primary" *ngIf="selectedDraft" (click)="editDraftFromDetails(selectedDraft, formDialog)">Edit Draft</button>
   </mat-dialog-actions>
 </ng-template>
