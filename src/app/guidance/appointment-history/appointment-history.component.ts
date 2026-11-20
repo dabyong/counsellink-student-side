@@ -26,6 +26,7 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
   pageSize = 5;
   status: AppointmentStatus | 'All' = 'All';
   search = '';
+  activeTab: 'history' | 'followUp' = 'history';
 
   loading = true;
   error = '';
@@ -113,7 +114,7 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
       Swal({ title: 'Loading appointments\u2026', allowOutsideClick: false, onOpen: () => { Swal.showLoading(); } });
     }
     this.guidance.getHistory({
-      pageIndex: this.pageIndex, pageSize: this.pageSize, status: this.status, search: this.search
+      pageIndex: this.pageIndex, pageSize: this.pageSize, status: this.status, search: this.search, tab: this.activeTab
     }).subscribe(
       r => {
         if (no !== this.requestNo) { return; }
@@ -157,6 +158,13 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
   }
 
   onSearchTyped() { this.typing$.next(); }
+
+  setTab(tab: 'history' | 'followUp') {
+    if (this.activeTab === tab) { return; }
+    this.activeTab = tab;
+    this.pageIndex = 0;
+    this.load();
+  }
 
   onFilterChanged() { this.pageIndex = 0; this.load(); }
 

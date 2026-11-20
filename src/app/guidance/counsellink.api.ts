@@ -450,6 +450,7 @@ export class CounselLinkApi {
       const term = (q.search || '').trim().toLowerCase();
       const items = all
         .filter(a => a.status !== 'Draft')   // Draft records (status 5) are managed separately
+        .filter(a => !q.tab || (q.tab === 'followUp' ? !!a.isFollowUp : !a.isFollowUp))
         .filter(a => !q.status || q.status === 'All' || a.status === q.status)
         .filter(a => !term || (a.counselingTypeName + ' ' + a.counselorName + ' ' + a.date + ' ' + a.notes + ' ' + a.status)
           .toLowerCase().indexOf(term) >= 0)

@@ -96,6 +96,8 @@ export interface HistoryQuery {
   pageSize: number;
   status: AppointmentStatus | 'All';
   search: string;
+  /** Optional category filter for the appointment-history view. */
+  tab?: 'history' | 'followUp';
 }
 
 export interface HistoryResult {

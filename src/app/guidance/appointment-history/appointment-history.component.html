@@ -26,9 +26,21 @@
           <mat-icon>add</mat-icon> Create Appointment
         </button>
       </div>
+      <div class="appointment-tabs" role="tablist" aria-label="Appointment sections">
+        <button type="button" role="tab" [attr.aria-selected]="activeTab === 'history'"
+          [class.active]="activeTab === 'history'" (click)="setTab('history')">History</button>
+        <button type="button" role="tab" [attr.aria-selected]="activeTab === 'followUp'"
+          [class.active]="activeTab === 'followUp'" (click)="setTab('followUp')">Follow-up</button>
+      </div>
       <div class="intro">
-        <h3>Recent appointments</h3>
-        <p>Track upcoming, completed, and rescheduled counseling sessions.</p>
+        <ng-container *ngIf="activeTab === 'history'">
+          <h3>Recent Appointments</h3>
+          <p>Track upcoming, completed, and rescheduled counseling sessions.</p>
+        </ng-container>
+        <ng-container *ngIf="activeTab === 'followUp'">
+          <h3>Follow-Up Appointments</h3>
+          <p>Track pending, completed, and cancelled follow-up sessions.</p>
+        </ng-container>
       </div>
 
       <div class="filters">
@@ -63,7 +75,7 @@
         <button mat-stroked-button type="button" class="btn-outline" matTooltip="Dismiss notification" (click)="notice=''">Dismiss</button>
       </div>
 
-      <div class="table-wrap" *ngIf="!loading && !error && items.length">
+      <div class="table-wrap" *ngIf="activeTab === 'history' && !loading && !error && items.length">
         <table class="appt-table">
           <thead>
             <tr>
@@ -128,9 +140,42 @@
         </table>
       </div>
 
+      <div class="table-wrap" *ngIf="activeTab === 'followUp' && !loading && !error && items.length">
+        <table class="appt-table follow-up-table">
+          <thead><tr>
+            <th class="col-id">ID</th><th class="col-date">Date</th><th class="col-time">Time</th>
+            <th class="col-concern">Concern</th><th class="col-notes">Action Required</th>
+            <th class="col-status">Status</th><th class="col-actions">Actions</th>
+          </tr></thead>
+          <tbody>
+            <tr *ngFor="let a of items" [ngClass]="'row-' + statusClass(a)">
+              <td class="col-id" data-label="ID">{{ a.id }}</td>
+              <td class="col-date" data-label="Date">{{ a.date | date:'MMM d, y' }}</td>
+              <td class="col-time" data-label="Time">{{ time(a) }}</td>
+              <td class="col-concern" data-label="Concern">{{ a.concernTypeName || '—' }}</td>
+              <td class="col-notes" data-label="Action Required">{{ a.notes || '—' }}</td>
+              <td class="col-status" data-label="Status"><span class="badge" [ngClass]="statusClass(a)">{{ displayStatus(a) }}</span></td>
+              <td class="col-actions" data-label="Actions">
+                <div class="row-actions">
+                  <ng-container *ngIf="(a.status === 'Scheduled' || a.status === 'Pending' || a.status === 'Approved') && !a.followUpReschedulePending">
+                    <button mat-stroked-button type="button" class="btn-outline btn-sm btn-icon"
+                      [disabled]="actionLoading" matTooltip="Request follow-up reschedule"
+                      (click)="openReschedule(a, formDialog)"><mat-icon>event_repeat</mat-icon></button>
+                  </ng-container>
+                  <ng-container *ngIf="a.status === 'Reschedule Pending'">
+                    <span class="waiting-label">Waiting for counselor</span>
+                  </ng-container>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
       <div class="empty" *ngIf="!loading && !error && !items.length">
         <ng-container *ngIf="search || status !== 'All'">No appointments match your search or filter.</ng-container>
-        <ng-container *ngIf="!search && status === 'All'">You have no appointments yet. Book one with the Create Appointment button.</ng-container>
+        <ng-container *ngIf="!search && status === 'All' && activeTab === 'history'">You have no appointments yet. Book one with the Create Appointment button.</ng-container>
+        <ng-container *ngIf="!search && status === 'All' && activeTab === 'followUp'">You have no follow-up appointments.</ng-container>
       </div>
 
 
