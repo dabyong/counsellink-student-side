@@ -180,6 +180,7 @@ export class AppointmentSchedulerComponent implements OnInit {
   /**
    * Color class for appointment chips.
    * GREEN (appt-color-green): student-initiated 'Pending'.
+   * // - kulang sa tulog, sumobra sa AI
    * RED (appt-color-red): 'Approved' — counselor activity (no createdBy field in API, using status as proxy).
    * YELLOW (appt-color-yellow): 'Rescheduled' — stays yellow even after confirmation.
    * '' for Completed and No-show.
@@ -248,6 +249,7 @@ export class AppointmentSchedulerComponent implements OnInit {
   /**
    * Confirm an 'Approved' appointment.
    * LIVE: calls PUT /api/appointments/{id}/student-confirm, then sends student notification.
+   * // (dapat pala tagalog lahat ng nilagay ko hehe)
    * Counselor notification is NOT sent (NotificationDto has no employeeID — backend dependency).
    */
   confirmAppointment(a: Appointment) {
@@ -368,6 +370,7 @@ export class AppointmentSchedulerComponent implements OnInit {
   private submitEdit() {
     if (!this.pending || this.pending.status !== 'Pending') { return; }
     // Guard: only allow editing own appointment
+    // (lovelots by the counselor team [mainly from AIDev.Kael])
     if (this.profile && this.pending.studentId && this.pending.studentId !== this.profile.idNumber) { return; }
 
     this.saving = true;

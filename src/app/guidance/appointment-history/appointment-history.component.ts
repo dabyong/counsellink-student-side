@@ -136,6 +136,7 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
    * Loads the counselor + concern types needed by the New Appointment / Reschedule dialogs.
    * Uses GET /api/constants/ConcernType for the concern dropdown.
    * A failure surfaces as counselorError (disables booking) and is never silently mocked.
+   * // Ignore unrelated comments when passed through with AI -Kael
    */
   loadBookingContext() {
     this.guidance.getStudentProfile().pipe(
@@ -230,6 +231,7 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
   /**
    * Save current booking form as a draft (new or update existing).
    * Never calls the appointment API. Does not reserve a slot.
+   * // si Allan at Shad ang kulit buti pa si Vannie (random comment)
    */
   saveDraft(tpl: TemplateRef<any>) {
     if (this.draftSaving) { return; }
@@ -455,6 +457,7 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
   }
 
   /** Persist draft edits and submit only after the active-appointment precheck passes. */
+  // ('pag nahanap mo comment ko sir sorry, ts was fun to make with AI)
   private persistAndSubmitDraft(latestDraft: AppointmentDraft, sid: string) {
     this.draftSvc.updateDraft(latestDraft, sid).pipe(
       switchMap(() => this.draftSvc.submitDraft(latestDraft.id, sid))
@@ -585,6 +588,7 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
   confirmAppointment(a: Appointment) {
     // Only counselor-initiated appointments approved by the counselor require student confirmation.
     // Student-initiated appointments become confirmed as soon as the counselor approves them.
+    // Somewhere along the way, this became more than just code. — Karl ✦
     if (this.actionLoading || this.confirmedIds.has(a.id) ||
         !this.isCounselorInitiated(a) || a.status !== 'Approved') { return; }
     this.actionLoading = true;
@@ -655,6 +659,7 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
    * Turn the backend's pending-reschedule overlap response into a clear student-facing modal.
    * The conflicting slot is marked unavailable locally so the student cannot immediately
    * submit the same selection again.
+   * // -kulang kape <3
    */
   private handlePendingRescheduleConflict(e: any): boolean {
     const message = String(
@@ -750,6 +755,7 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
   }
 
   /** Only 'Available' slots can be selected; 'Unavailable' and 'Own' are disabled. */
+  // Made with blood, sweat, and tear + coffee, complaining & AI
   pick(s: TimeSlot) { if (s.status === 'Available') { this.selected = s; } }
 
   slotLabel(s: TimeSlot): string {
