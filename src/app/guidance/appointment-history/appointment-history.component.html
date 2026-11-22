@@ -107,7 +107,7 @@
                   <ng-container *ngIf="isFollowUp(a) && (a.status === 'Scheduled' || a.status === 'Pending' || a.status === 'Approved') && !a.followUpReschedulePending">
                     <button mat-stroked-button type="button" class="btn-outline btn-sm btn-icon"
                       [disabled]="actionLoading" matTooltip="Request follow-up reschedule"
-                      (click)="openReschedule(a, formDialog)"><mat-icon>event_repeat</mat-icon></button>
+                      (click)="openReschedule(a, formDialog)"><mat-icon>repeat</mat-icon></button>
                   </ng-container>
                   <ng-container *ngIf="isFollowUp(a) && a.status === 'Reschedule Pending'">
                     <span class="waiting-label">Waiting for counselor</span>
@@ -160,7 +160,7 @@
                   <ng-container *ngIf="(a.status === 'Scheduled' || a.status === 'Pending' || a.status === 'Approved') && !a.followUpReschedulePending">
                     <button mat-stroked-button type="button" class="btn-outline btn-sm btn-icon"
                       [disabled]="actionLoading" matTooltip="Request follow-up reschedule"
-                      (click)="openReschedule(a, formDialog)"><mat-icon>event_repeat</mat-icon></button>
+                      (click)="openReschedule(a, formDialog)"><mat-icon>repeat</mat-icon></button>
                   </ng-container>
                   <ng-container *ngIf="a.status === 'Reschedule Pending'">
                     <span class="waiting-label">Waiting for counselor</span>
