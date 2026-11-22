@@ -476,8 +476,9 @@ export class CounselLinkApi {
   }
 
   private hasBookingRestriction(appointments: Appointment[], replaceId: number): boolean {
+    // 'Rescheduled' is included: a student with a pending reschedule must resolve it before booking a new appointment.
     return appointments.some(a =>
-      (a.status === 'Pending' || a.status === 'Approved') && a.id !== replaceId
+      (a.status === 'Pending' || a.status === 'Approved' || a.status === 'Rescheduled') && a.id !== replaceId
     );
   }
 
@@ -651,7 +652,7 @@ export class CounselLinkApi {
       .pipe(switchMap(r => {
         const mine = r[0], taken = r[1], statuses = r[2];
         if (this.hasBookingRestriction(mine, replaceId)) {
-          return throwError(new Error('You already have a pending appointment. Reschedule it or attend it before booking another.'));
+          return throwError(new Error('You already have a pending or rescheduled appointment. Resolve it before booking another.'));
         }
         if (mine.some(a => a.id !== replaceId && a.status !== 'Rescheduled' && a.date === req.date && a.startTime === req.startTime)) {
           return throwError(new Error('You already have an appointment at that time.'));
