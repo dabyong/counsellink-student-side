@@ -503,14 +503,15 @@ export class CounselLinkApi {
         return throwError(new Error('Only a pending or approved appointment can be rescheduled.'));
       }
       const body = {
-        newStartDate: req.date + 'T' + req.startTime + ':00',
-        newEndDate: req.date + 'T' + req.endTime + ':00',
-        rescheduleNote: 'Rescheduled by the student to ' + req.date + ' ' + req.startTime + '.'
+        actorRole: 'Student',
+        actorID: p.idNumber,
+        newStart: req.date + 'T' + req.startTime + ':00',
+        newEnd: req.date + 'T' + req.endTime + ':00',
+        rescheduleNote: 'Proposed by student for ' + req.date + ' ' + req.startTime + '.'
       };
-      return this.send('post', 'appointments/' + id + '/reschedule', body).pipe(
+      return this.send('post', 'appointments/' + id + '/reschedule-v2/proposals', body).pipe(
         switchMap(() => this.studentAppointments(p).pipe(map(list => {
-          // The backend updates the existing appointment's status to Rescheduled (no new row created;
-          // response is { newId: null, message: "..." }). Re-fetch the same appointment by its ID.
+          // V2 stores an outstanding proposal; original date/status remain unchanged.
           const found = list.filter(a => a.id === id)[0]
             || list.filter(a => a.status === 'Pending' || a.status === 'Approved')[0];
           if (!found) {
@@ -595,13 +596,25 @@ export class CounselLinkApi {
     );
   }
 
+  /** Read the active bidirectional proposal using the logged-in student ID.
+   * A 404 means no active V2 proposal; other failures must not be hidden.
+   */
+  getPendingRescheduleV2(p: StudentProfile, id: number): Observable<any | null> {
+    return this.get('appointments/' + id + '/reschedule-v2/pending',
+      { actorRole: 'Student', actorId: p.idNumber }).pipe(
+      map(body => rows(body)[0] || null),
+      catchError((err: any) => err && err.status === 404 ? of(null) : throwError(err))
+    );
+  }
+
   /**
    * PUT /api/appointments/{id}/accept-reschedule — body: StudentIdNumberDto { idNumber: string }.
    * Called when a student accepts a counselor-proposed reschedule.
    * Returns the updated appointment if re-fetch succeeds.
    */
   acceptReschedule(p: StudentProfile, id: number): Observable<Appointment> {
-    return this.send('put', 'appointments/' + id + '/accept-reschedule', { idNumber: p.idNumber }).pipe(
+    return this.send('put', 'appointments/' + id + '/reschedule-v2/accept',
+      { actorRole: 'Student', actorID: p.idNumber }).pipe(
       switchMap(() => this.studentAppointments(p).pipe(map(list => {
         const found = list.filter(a => a.id === id)[0];
         if (!found) { throw new Error('Reschedule accepted, but appointment could not be reloaded. Please check your history.'); }
