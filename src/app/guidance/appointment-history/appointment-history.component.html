@@ -149,6 +149,9 @@
                     <!-- Approved appointments are confirmed for both initiation types; no further action is needed. -->
                     <span class="waiting-label">Appointment Confirmed</span>
                   </ng-container>
+                  <ng-container *ngIf="!isFollowUp(a) && a.status === 'No-show'">
+                    <span class="waiting-label">No-show · Rescheduling unavailable</span>
+                  </ng-container>
                   <ng-container *ngIf="!isFollowUp(a) && a.status === 'Rescheduled'">
                     <span class="waiting-label">Reschedule awaiting confirmation</span>
                   </ng-container>
