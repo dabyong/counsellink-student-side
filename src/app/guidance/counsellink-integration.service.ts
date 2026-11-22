@@ -165,14 +165,30 @@ export class CounselLinkIntegrationService {
     return this.liveSend('put', 'api/appointments/' + id + '/complete');
   }
 
+  /** API Integration utility must use the same V2 workflow as Appointment History.
+   * Derive the student identity from the active portal login, never an arbitrary form ID.
+   */
   rescheduleAppointment(id: number, body: RescheduleDto): Observable<any> {
     if (this.useMock) { return of(this.mockOk()); }
-    return this.liveSend('post', 'api/appointments/' + id + '/reschedule', body);
+    const studentId = String(this.global.requestid() || '').trim();
+    if (!studentId) { throw new Error('Student session is missing. Log in again.'); }
+    return this.liveSend('post', 'api/appointments/' + id + '/reschedule-v2/proposals', {
+      actorRole: 'Student',
+      actorID: studentId,
+      newStart: body.newStartDate,
+      newEnd: body.newEndDate,
+      rescheduleNote: body.rescheduleNote
+    });
   }
 
   acceptReschedule(id: number, body: { idNumber: string }): Observable<any> {
     if (this.useMock) { return of(this.mockOk()); }
-    return this.liveSend('put', 'api/appointments/' + id + '/accept-reschedule', body);
+    const studentId = String(this.global.requestid() || '').trim();
+    if (!studentId) { throw new Error('Student session is missing. Log in again.'); }
+    return this.liveSend('put', 'api/appointments/' + id + '/reschedule-v2/accept', {
+      actorRole: 'Student',
+      actorID: studentId
+    });
   }
 
   noShowAppointment(id: number): Observable<any> {
