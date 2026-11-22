@@ -242,6 +242,10 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
   }
 
   openReschedule(a: Appointment, tpl: TemplateRef<any>) {
+    if (!a || a.status === 'No-show' || a.status === 'Completed' || a.status === 'Cancelled') {
+      this.actionError = 'This appointment is already closed and cannot be rescheduled.';
+      return;
+    }
     this.target = a;
     this.activeDraft = null;   // ensure normal reschedule mode
     this.mode = 'reschedule';
@@ -822,6 +826,11 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
 
   submit() {
     if (!this.canSubmit) { return; }
+    if (this.mode === 'reschedule' && this.target &&
+        (this.target.status === 'No-show' || this.target.status === 'Completed' || this.target.status === 'Cancelled')) {
+      this.formError = 'This appointment is already closed and cannot be rescheduled.';
+      return;
+    }
     const s = this.selected;
     this.saving = true;
     this.formError = '';

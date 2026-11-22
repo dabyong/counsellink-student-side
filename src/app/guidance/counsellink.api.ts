@@ -363,6 +363,9 @@ export class CounselLinkApi {
     const type = lk.types.filter(t => t.id === +typeId)[0];
     const st = lk.statuses.filter(s => s.id === +field(row, 'appointmentStatusID'))[0];
     const statusName = st ? st.name : String(firstDefined(row, ['appointmentStatus', 'statusName']) || '');
+    // Attendance is separate from appointment approval. No-Show (3) is terminal
+    // even if a legacy API response still reports appointment status Confirmed (2).
+    const isNoShow = Number(field(row, 'attendanceStatusID')) === 3;
     return {
       id: id,
       studentId: String(field(row, 'idNumber') || ''),
@@ -375,7 +378,7 @@ export class CounselLinkApi {
       date: toYmd(field(row, 'appointmentDate')),
       startTime: start,
       endTime: endFor(start),
-      status: labelFor(statusName),
+      status: isNoShow ? 'No-show' : labelFor(statusName),
       schoolYear: String((this.global as any).syear || this.global.constSY || this.global.sy || ''),
       notes: String(field(row, 'concernDescription') || '')
     };
