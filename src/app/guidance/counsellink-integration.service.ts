@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Http, Headers, RequestOptions } from '@angular/http';
-import { Observable, of } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { map, catchError, timeout } from 'rxjs/operators';
 import { GlobalService } from '../global.service';
 
@@ -171,7 +171,7 @@ export class CounselLinkIntegrationService {
   rescheduleAppointment(id: number, body: RescheduleDto): Observable<any> {
     if (this.useMock) { return of(this.mockOk()); }
     const studentId = String(this.global.requestid() || '').trim();
-    if (!studentId) { throw new Error('Student session is missing. Log in again.'); }
+    if (!studentId) { return throwError(new Error('Student session is missing. Log in again.')); }
     return this.liveSend('post', 'api/appointments/' + id + '/reschedule-v2/proposals', {
       actorRole: 'Student',
       actorID: studentId,
@@ -184,7 +184,7 @@ export class CounselLinkIntegrationService {
   acceptReschedule(id: number, body: { idNumber: string }): Observable<any> {
     if (this.useMock) { return of(this.mockOk()); }
     const studentId = String(this.global.requestid() || '').trim();
-    if (!studentId) { throw new Error('Student session is missing. Log in again.'); }
+    if (!studentId) { return throwError(new Error('Student session is missing. Log in again.')); }
     return this.liveSend('put', 'api/appointments/' + id + '/reschedule-v2/accept', {
       actorRole: 'Student',
       actorID: studentId
