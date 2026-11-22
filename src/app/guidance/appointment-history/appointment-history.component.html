@@ -104,6 +104,12 @@
               </td>
               <td class="col-actions" data-label="Actions">
                 <div class="row-actions">
+                  <!-- Counselor-initiated appointments may also be rescheduled by the student. -->
+                  <ng-container *ngIf="!isFollowUp(a) && isCounselorInitiated(a) && (a.status === 'Pending' || a.status === 'Approved')">
+                    <button mat-stroked-button type="button" class="btn-outline btn-sm btn-icon"
+                      [disabled]="actionLoading" matTooltip="Reschedule appointment"
+                      (click)="openReschedule(a, formDialog)"><mat-icon>repeat</mat-icon></button>
+                  </ng-container>
                   <ng-container *ngIf="isFollowUp(a) && (a.status === 'Scheduled' || a.status === 'Pending' || a.status === 'Approved') && !a.followUpReschedulePending">
                     <button mat-stroked-button type="button" class="btn-outline btn-sm btn-icon"
                       [disabled]="actionLoading" matTooltip="Request follow-up reschedule"
