@@ -603,10 +603,17 @@ export class CounselLinkApi {
    * A 404 means no active V2 proposal; other failures must not be hidden.
    */
   getPendingRescheduleV2(p: StudentProfile, id: number): Observable<any | null> {
-    return this.get('appointments/' + id + '/reschedule-v2/pending',
-      { actorRole: 'Student', actorId: p.idNumber }).pipe(
-      map(body => rows(body)[0] || null),
-      catchError((err: any) => err && err.status === 404 ? of(null) : throwError(err))
+    // Handle 404 on the raw HTTP response BEFORE the shared get() helper
+    // converts HttpErrorResponse into a friendly Error (which drops .status).
+    // A missing proposal is normal for appointments without active reschedules.
+    // Other errors must still surface rather than silently hiding proposals.
+    const path = 'appointments/' + id + '/reschedule-v2/pending';
+    const params = { actorRole: 'Student', actorId: p.idNumber };
+    return this.http.get(this.url(path, params), this.options()).pipe(
+      timeout(REQUEST_TIMEOUT_MS),
+      map(response => rows(this.parse(response))[0] || null),
+      catchError((err: any) =>
+        err && err.status === 404 ? of(null) : throwError(this.friendly(err)))
     );
   }
 
