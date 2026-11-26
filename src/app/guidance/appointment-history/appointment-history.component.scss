@@ -222,7 +222,6 @@ $shadow: 0 1px 3px rgba(0, 0, 0, .15);
 }
 
 // Column widths — allow long columns to wrap
-.col-id      { width: 56px;  white-space: nowrap; color: $muted; font-size: 12px; }
 .col-date    { width: 100px; white-space: nowrap; }
 .col-time    { width: 110px; white-space: nowrap; }
 .col-type    { width: 120px; }
@@ -362,4 +361,22 @@ $shadow: 0 1px 3px rgba(0, 0, 0, .15);
     color: #fff !important;
     .mat-icon { color: #fff !important; }
   }
+}
+
+/* Acceptance dialog: reuse the existing Material controls and CounselLink palette. */
+.acceptance-title {
+  background: $navy; color: #fff; font-size: 18px; line-height: 1.4;
+  margin: -24px -24px 20px; padding: 16px 24px;
+}
+.acceptance-content { min-width: 0; }
+.acceptance-schedule {
+  margin: 0 0 16px; padding: 12px; background: #f5f7fa; border-radius: 4px;
+  > div + div { border-top: 1px solid $line; margin-top: 10px; padding-top: 10px; }
+  dt { font-size: 12px; color: $muted; }
+  dd { margin: 4px 0 0; font-weight: 600; color: $ink; }
+}
+.acceptance-reason-label { color: $navy; font-size: 14px; font-weight: 600; margin: 0 0 8px; }
+.acceptance-reason {
+  border: 1px solid $line; border-radius: 4px; padding: 12px; max-height: 200px;
+  overflow-y: auto; overflow-wrap: anywhere; white-space: pre-wrap;
 }
