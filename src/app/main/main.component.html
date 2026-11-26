@@ -191,8 +191,6 @@
           <span *ngIf="hasPendingAppointment || hasUnreadNotification" class="appt-badge">!</span>
           <span *ngIf="hasPendingAppointment" class="appt-dot" [ngClass]="appointmentColorClass"></span>
         </a>
-        <a mat-button [routerLink]="['../main',{outlets:{div:'guidance-api-integration'}}]" class="vmenu"><i
-            class="material-icons iconsize">api</i> API Integration</a>
         <!-- Place your Student Navigation Menu here -->
       </div>
       <mat-spinner style="margin-right: auto;margin-left: auto" *ngIf="!global.loading"></mat-spinner>
