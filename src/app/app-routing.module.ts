@@ -8,7 +8,6 @@ import { PersonalDataComponent } from './pages/personal-data/personal-data.compo
 import { HsEnrollmentComponent } from './pages/hs-enrollment/hs-enrollment.component';
 import { SampleDataPageComponent } from './pages/sample-data-page/sample-data-page.component';
 import { AppointmentHistoryComponent } from './guidance/appointment-history/appointment-history.component';
-import { ApiIntegrationComponent } from './guidance/api-integration/api-integration.component';
 
 
 const routes: Routes = [
@@ -30,8 +29,7 @@ const routes: Routes = [
       // Appointment History is the primary appointment page; the old scheduler/history routes redirect to it.
       { path: 'guidance-appointments', component: AppointmentHistoryComponent, outlet: 'div' },
       { path: 'guidance-scheduler', redirectTo: 'guidance-appointments' },
-      { path: 'guidance-history', redirectTo: 'guidance-appointments' },
-      { path: 'guidance-api-integration', component: ApiIntegrationComponent, outlet: 'div' }
+      { path: 'guidance-history', redirectTo: 'guidance-appointments' }
     ]
   },
   {
