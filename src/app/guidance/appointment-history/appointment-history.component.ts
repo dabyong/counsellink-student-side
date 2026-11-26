@@ -608,6 +608,46 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
     return this.guidance.formatTime(d.startTime) + (d.endTime ? ' – ' + this.guidance.formatTime(d.endTime) : '');
   }
 
+  /** Limit only the table display; keep the original notes for the acceptance dialog. */
+  shortDescription(notes: string): string {
+    if (!notes) { return '—'; }
+    const characters = Array.from(notes);
+    return characters.length > 100 ? characters.slice(0, 100).join('') + '…' : notes;
+  }
+
+  /** Review the exact schedule being accepted before invoking the existing action. */
+  openAcceptance(a: Appointment, tpl: TemplateRef<any>, reschedule: boolean): void {
+    if (this.actionLoading || !a) { return; }
+    const proposal = reschedule ? this.pendingV2ByAppointment[a.id] : null;
+    if (reschedule && !this.counselorV2Pending(a)) { return; }
+    if (!reschedule && (!this.isCounselorInitiated(a) || a.status !== 'Pending' || this.hasV2Pending(a))) { return; }
+    const start = proposal ? String(proposal.proposedStartDateTime || '') : '';
+    const end = proposal ? String(proposal.proposedEndDateTime || '') : '';
+    const data = {
+      reschedule,
+      date: reschedule ? start.substring(0, 10) : a.date,
+      time: reschedule
+        ? this.guidance.formatTime(start.substring(11, 16)) + ' - ' + this.guidance.formatTime(end.substring(11, 16))
+        : this.time(a),
+      notes: a.notes
+    };
+    const ref = this.dialog.open(tpl, { width: '560px', maxWidth: '95vw', disableClose: true, data });
+    ref.afterClosed().subscribe(accepted => {
+      if (accepted !== true || this.actionLoading) { return; }
+      if (reschedule) {
+        const current = this.pendingV2ByAppointment[a.id];
+        if (!current || String(current.proposedStartDateTime || '') !== start ||
+            String(current.proposedEndDateTime || '') !== end || !this.counselorV2Pending(a)) {
+          this.actionError = 'The proposed schedule has changed. Please review it again.';
+          return;
+        }
+        this.acceptReschedule(a);
+      } else if (!this.hasV2Pending(a)) {
+        this.confirmCounselorInitiated(a);
+      }
+    });
+  }
+
   /** Accept a counselor-initiated Pending appointment using the API's counselor confirm route. */
   confirmCounselorInitiated(a: Appointment) {
     if (this.actionLoading || !this.isCounselorInitiated(a) || a.status !== 'Pending') { return; }
