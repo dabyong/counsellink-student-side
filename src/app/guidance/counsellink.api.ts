@@ -205,14 +205,14 @@ export class CounselLinkApi {
     let msg = '';
     try {
       const b = e.json ? e.json() : null;
-      msg = typeof b === 'string' ? b : (b && (b.message || b.detail || b.title)) || '';
+      msg = typeof b === 'string' ? b : (b && (b.message || b.detail || b.error || b.title)) || '';
     } catch (x) {
       try { msg = e.text ? e.text() : ''; } catch (y) { msg = ''; }
     }
     if (e && e.status >= 400 && e.status < 500 && typeof msg === 'string' && msg && msg.length <= 200) {
-      return new Error(msg);
+      return Object.assign(new Error(msg), { status: e.status });
     }
-    return new Error('Something went wrong with the guidance service. Please try again.');
+    return Object.assign(new Error('Something went wrong with the guidance service. Please try again.'), { status: e && e.status });
   }
 
   // ------------------------------------------------------------- lookups

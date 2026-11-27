@@ -120,6 +120,8 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
   private firstLoad = true;
 
   @ViewChild('confirmDialog', { static: false }) confirmDialogTpl: TemplateRef<any>;
+  @ViewChild('expiredAppointmentDialog', { static: false }) expiredAppointmentDialogTpl: TemplateRef<any>;
+  @ViewChild('formDialog', { static: false }) rescheduleFormTpl: TemplateRef<any>;
 
   private typing$ = new Subject<void>();
   private sub: Subscription;
@@ -621,6 +623,10 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
     const proposal = reschedule ? this.pendingV2ByAppointment[a.id] : null;
     if (reschedule && !this.counselorV2Pending(a)) { return; }
     if (!reschedule && (!this.isCounselorInitiated(a) || a.status !== 'Pending' || this.hasV2Pending(a))) { return; }
+    if (!reschedule && this.appointmentTimeHasPassed(a)) {
+      this.showExpiredAppointment(a);
+      return;
+    }
     const start = proposal ? String(proposal.proposedStartDateTime || '') : '';
     const end = proposal ? String(proposal.proposedEndDateTime || '') : '';
     const data = {
@@ -648,9 +654,33 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Compare the displayed slot end against Philippine time, regardless of browser timezone. */
+  private appointmentTimeHasPassed(a: Appointment): boolean {
+    if (!a || !/^\d{4}-\d{2}-\d{2}$/.test(a.date || '') ||
+        !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(a.endTime || '')) { return false; }
+    const end = Date.parse(a.date + 'T' + a.endTime + ':00+08:00');
+    return Number.isFinite(end) && Date.now() >= end;
+  }
+
+  private showExpiredAppointment(a: Appointment): void {
+    this.actionError = '';
+    this.notice = '';
+    const ref = this.dialog.open(this.expiredAppointmentDialogTpl, {
+      width: '560px', maxWidth: '95vw', disableClose: true,
+      data: { date: a.date, time: this.time(a) }
+    });
+    ref.afterClosed().subscribe(reschedule => {
+      if (reschedule === true) { this.openReschedule(a, this.rescheduleFormTpl); }
+    });
+  }
+
   /** Accept a counselor-initiated Pending appointment using the API's counselor confirm route. */
   confirmCounselorInitiated(a: Appointment) {
     if (this.actionLoading || !this.isCounselorInitiated(a) || a.status !== 'Pending') { return; }
+    if (this.appointmentTimeHasPassed(a)) {
+      this.showExpiredAppointment(a);
+      return;
+    }
     this.actionLoading = true;
     this.actionError = '';
     this.notice = '';
@@ -664,6 +694,11 @@ export class AppointmentHistoryComponent implements OnInit, OnDestroy {
       },
       e => {
         this.actionLoading = false;
+        if (e && e.status === 400 && (this.appointmentTimeHasPassed(a) ||
+            /\b(?:past|elapsed|expired|already passed|has passed|have passed)\b/i.test(e.message || ''))) {
+          this.showExpiredAppointment(a);
+          return;
+        }
         this.actionError = (e && e.message) ? e.message : 'Could not accept the appointment.';
       }
     );

@@ -385,3 +385,19 @@
     <button mat-raised-button type="button" class="btn-primary" [mat-dialog-close]="true">Accept Appointment</button>
   </mat-dialog-actions>
 </ng-template>
+
+<!-- Expired counselor-initiated appointment: reuse the acceptance card styling. -->
+<ng-template #expiredAppointmentDialog let-details>
+  <h2 mat-dialog-title class="acceptance-title">Appointment Time Has Passed</h2>
+  <mat-dialog-content class="dlg-body acceptance-content">
+    <p>The scheduled time for this appointment has already passed. You can no longer accept this appointment, but you may request a reschedule.</p>
+    <dl class="acceptance-schedule">
+      <div><dt>Scheduled date</dt><dd>{{ details.date ? (details.date | date:'MMMM d, y') : 'Not available' }}</dd></div>
+      <div><dt>Scheduled time</dt><dd>{{ details.time }}</dd></div>
+    </dl>
+  </mat-dialog-content>
+  <mat-dialog-actions class="dlg-actions">
+    <button mat-stroked-button type="button" class="btn-outline" [mat-dialog-close]="false">Cancel</button>
+    <button mat-raised-button type="button" class="btn-primary" [mat-dialog-close]="true">Reschedule</button>
+  </mat-dialog-actions>
+</ng-template>
